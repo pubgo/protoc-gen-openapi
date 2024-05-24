@@ -23,18 +23,19 @@ option go_package = "github.com/google/gnostic/apps/protoc-gen-openapi/examples/
 
 // Messaging service
 service Messaging {
-  rpc CreateMessage(Message) returns (Message) {
-    option (google.api.http) = {
-      post : "/v1/messages/{message_id}"
-      body : "body_text"
-    };
-  }
+    rpc CreateMessage (Message) returns (Message) {
+        option (google.api.http) = {
+            post: "/v1/messages/{message_id}"
+            body: "*"
+        };
+    }
 }
 message Message {
-  Kind kind = 1;
+    Kind kind = 1;
+    int32 message_id = 2;
 }
 enum Kind {
-  UNKNOWN_KIND = 0;
-  KIND_1 = 1;
-  KIND_2 = 2;
+    UNKNOWN_KIND = 0;
+    KIND_1 = 1;
+    KIND_2 = 2;
 }

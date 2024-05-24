@@ -7,29 +7,23 @@ info:
     description: Messaging service
     version: 0.0.1
 paths:
-    /v1/messages/{message_id}:
+    /v1/messages/{messageId}:
         post:
             tags:
                 - Messaging
             operationId: Messaging_CreateMessage
             parameters:
-                - name: message_id
+                - name: messageId
                   in: path
                   required: true
                   schema:
-                    type: string
-                - name: kind
-                  in: query
-                  schema:
-                    enum:
-                        - UNKNOWN_KIND
-                        - KIND_1
-                        - KIND_2
-                    type: string
-                    format: enum
+                    type: integer
+                    format: int32
             requestBody:
                 content:
-                    application/json: {}
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/Message'
                 required: true
             responses:
                 "200":
@@ -50,5 +44,8 @@ components:
                         - KIND_2
                     type: string
                     format: enum
+                messageId:
+                    type: integer
+                    format: int32
 tags:
     - name: Messaging

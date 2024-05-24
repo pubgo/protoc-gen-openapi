@@ -1,12 +1,14 @@
 # protoc-gen-openapi
 
-This directory contains a protoc plugin that generates an
+> This directory contains a protoc plugin that generates an
 OpenAPI description for a REST API that corresponds to a
 Protocol Buffer service.
 
+> This project is a simplification of the [google/gnostic](https://github.com/google/gnostic/tree/main/openapiv3) project, dedicated to providing a simple version of the protoc-gen-openapi
+
 Installation:
 
-    go install github.com/google/gnostic/cmd/protoc-gen-openapi
+    go install github.com/pubgo/protoc-gen-openapi@latest
 
 Usage:
 
