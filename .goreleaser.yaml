@@ -1,0 +1,17 @@
+builds:
+  - main: ./main.go
+    id: protoc-gen-openapi
+    binary: protoc-gen-openapi
+    skip: false
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+archives:
+  - name_template: "{{ .Binary }}-{{ .Tag }}-{{ .Os }}-{{ .Arch }}"
+    format: tar.gz
+checksum:
+  name_template: "{{ .Tag }}_checksums.txt"
+report_sizes: true
