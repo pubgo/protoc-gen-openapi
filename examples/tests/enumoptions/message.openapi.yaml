@@ -1,5 +1,5 @@
 # Generated with protoc-gen-openapi
-# https://github.com/google/gnostic/tree/master/cmd/protoc-gen-openapi
+# https://github.com/pubgo/protoc-gen-openapi
 
 openapi: 3.0.3
 info:
@@ -43,6 +43,11 @@ components:
                         - KIND_1
                         - KIND_2
                     type: string
+                    default: UNKNOWN_KIND
+                    description: |
+                        - 未知: UNKNOWN_KIND
+                        - 第一个: KIND_1
+                        - 第二个: KIND_2
                     format: enum
                 messageId:
                     type: integer

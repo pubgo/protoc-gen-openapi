@@ -19,9 +19,10 @@ import (
 	"log"
 	"strings"
 
+	v3 "github.com/google/gnostic-models/openapiv3"
+	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	v3 "github.com/google/gnostic/openapiv3"
 	wk "github.com/pubgo/protoc-gen-openapi/generator/wellknown"
 )
 
@@ -39,27 +40,14 @@ type OpenAPIv3Reflector struct {
 // NewOpenAPIv3Reflector creates a new reflector.
 func NewOpenAPIv3Reflector(conf Configuration) *OpenAPIv3Reflector {
 	return &OpenAPIv3Reflector{
-		conf: conf,
-
+		conf:            conf,
 		requiredSchemas: make([]string, 0),
 	}
 }
 
-func (r *OpenAPIv3Reflector) getMessageName(message protoreflect.MessageDescriptor) string {
-	prefix := ""
-	parent := message.Parent()
-
-	if _, ok := parent.(protoreflect.MessageDescriptor); ok {
-		prefix = string(parent.Name()) + "_" + prefix
-	}
-
-	return prefix + string(message.Name())
-}
-
 func (r *OpenAPIv3Reflector) formatMessageName(message protoreflect.MessageDescriptor) string {
-	typeName := r.fullMessageTypeName(message)
-
-	name := r.getMessageName(message)
+	typeName := fullMessageTypeName(message)
+	name := getMessageName(message)
 	if !*r.conf.FQSchemaNaming {
 		if typeName == ".google.protobuf.Value" {
 			name = protobufValueName
@@ -79,8 +67,8 @@ func (r *OpenAPIv3Reflector) formatMessageName(message protoreflect.MessageDescr
 	}
 
 	if *r.conf.FQSchemaNaming {
-		package_name := string(message.ParentFile().Package())
-		name = package_name + "." + name
+		packageName := string(message.ParentFile().Package())
+		name = packageName + "." + name
 	}
 
 	return name
@@ -94,14 +82,8 @@ func (r *OpenAPIv3Reflector) formatFieldName(field protoreflect.FieldDescriptor)
 	return field.JSONName()
 }
 
-// fullMessageTypeName builds the full type name of a message.
-func (r *OpenAPIv3Reflector) fullMessageTypeName(message protoreflect.MessageDescriptor) string {
-	name := r.getMessageName(message)
-	return "." + string(message.ParentFile().Package()) + "." + name
-}
-
 func (r *OpenAPIv3Reflector) responseContentForMessage(message protoreflect.MessageDescriptor) (string, *v3.MediaTypes) {
-	typeName := r.fullMessageTypeName(message)
+	typeName := fullMessageTypeName(message)
 
 	if typeName == ".google.protobuf.Empty" {
 		return "200", &v3.MediaTypes{}
@@ -125,10 +107,8 @@ func (r *OpenAPIv3Reflector) schemaReferenceForMessage(message protoreflect.Mess
 // Returns a full schema for simple types, and a schema reference for complex types that reference
 // the definition in `#/components/schemas/`
 func (r *OpenAPIv3Reflector) schemaOrReferenceForMessage(message protoreflect.MessageDescriptor) *v3.SchemaOrReference {
-	typeName := r.fullMessageTypeName(message)
-
+	typeName := fullMessageTypeName(message)
 	switch typeName {
-
 	case ".google.api.HttpBody":
 		return wk.NewGoogleApiHttpBodySchema()
 
@@ -172,20 +152,21 @@ func (r *OpenAPIv3Reflector) schemaOrReferenceForMessage(message protoreflect.Me
 	default:
 		ref := r.schemaReferenceForMessage(message)
 		return &v3.SchemaOrReference{
-			Oneof: &v3.SchemaOrReference_Reference{
-				Reference: &v3.Reference{XRef: ref}}}
+			Oneof: &v3.SchemaOrReference_Reference{Reference: &v3.Reference{XRef: ref}},
+		}
 	}
 }
 
-func (r *OpenAPIv3Reflector) schemaOrReferenceForField(field protoreflect.FieldDescriptor) *v3.SchemaOrReference {
+func (r *OpenAPIv3Reflector) schemaOrReferenceForField(field *protogen.Field, desc protoreflect.FieldDescriptor) *v3.SchemaOrReference {
+	if desc == nil {
+		desc = field.Desc
+	}
+
 	var kindSchema *v3.SchemaOrReference
-
-	kind := field.Kind()
-
+	kind := desc.Kind()
 	switch kind {
-
 	case protoreflect.MessageKind:
-		if field.IsMap() {
+		if desc.IsMap() {
 			// This means the field is a map, for example:
 			//   map<string, value_type> map_field = 1;
 			//
@@ -199,9 +180,9 @@ func (r *OpenAPIv3Reflector) schemaOrReferenceForField(field protoreflect.FieldD
 			//
 			// So we need to find the `value` field in the `MapFieldEntry` message and
 			// then return a MapFieldEntry schema using the schema for the `value` field
-			return wk.NewGoogleProtobufMapFieldEntrySchema(r.schemaOrReferenceForField(field.MapValue()))
+			return wk.NewGoogleProtobufMapFieldEntrySchema(r.schemaOrReferenceForField(field, desc.MapValue()))
 		} else {
-			kindSchema = r.schemaOrReferenceForMessage(field.Message())
+			kindSchema = r.schemaOrReferenceForMessage(desc.Message())
 		}
 
 	case protoreflect.StringKind:
@@ -216,7 +197,7 @@ func (r *OpenAPIv3Reflector) schemaOrReferenceForField(field protoreflect.FieldD
 		kindSchema = wk.NewStringSchema()
 
 	case protoreflect.EnumKind:
-		kindSchema = wk.NewEnumSchema(*&r.conf.EnumType, field)
+		kindSchema = wk.NewEnumSchema(r.conf.EnumType, field)
 
 	case protoreflect.BoolKind:
 		kindSchema = wk.NewBooleanSchema()
@@ -228,10 +209,10 @@ func (r *OpenAPIv3Reflector) schemaOrReferenceForField(field protoreflect.FieldD
 		kindSchema = wk.NewBytesSchema()
 
 	default:
-		log.Printf("(TODO) Unsupported field type: %+v", r.fullMessageTypeName(field.Message()))
+		log.Printf("(TODO) Unsupported field type: %+v", fullMessageTypeName(field.Desc.Message()))
 	}
 
-	if field.IsList() {
+	if field.Desc.IsList() {
 		kindSchema = wk.NewListSchema(kindSchema)
 	}
 

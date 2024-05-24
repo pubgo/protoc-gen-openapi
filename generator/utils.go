@@ -62,3 +62,18 @@ func getValueField(message protoreflect.MessageDescriptor) protoreflect.FieldDes
 	fields := message.Fields()
 	return fields.ByName("value")
 }
+
+func getMessageName(message protoreflect.MessageDescriptor) string {
+	prefix := ""
+	parent := message.Parent()
+	if _, ok := parent.(protoreflect.MessageDescriptor); ok {
+		prefix = string(parent.Name()) + "_" + prefix
+	}
+	return prefix + string(message.Name())
+}
+
+// fullMessageTypeName builds the full type name of a message.
+func fullMessageTypeName(message protoreflect.MessageDescriptor) string {
+	name := getMessageName(message)
+	return "." + string(message.ParentFile().Package()) + "." + name
+}

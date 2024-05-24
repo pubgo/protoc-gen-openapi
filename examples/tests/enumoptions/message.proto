@@ -35,7 +35,12 @@ message Message {
     int32 message_id = 2;
 }
 enum Kind {
+    // 未知
     UNKNOWN_KIND = 0;
+
+    // 第一个
     KIND_1 = 1;
+
+    // 第二个
     KIND_2 = 2;
 }

@@ -1,5 +1,5 @@
 # Generated with protoc-gen-openapi
-# https://github.com/google/gnostic/tree/master/cmd/protoc-gen-openapi
+# https://github.com/pubgo/protoc-gen-openapi
 
 openapi: 3.0.3
 info:
@@ -365,6 +365,10 @@ components:
                         - draft
                         - published
                     type: string
+                    default: draft
+                    description: |
+                        - 未上架: draft
+                        - 上架: published
                     format: enum
             description: A single book in the library.
         ListBooksResponse:
