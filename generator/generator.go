@@ -29,6 +29,7 @@ import (
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/types/descriptorpb"
 	any_pb "google.golang.org/protobuf/types/known/anypb"
 
 	wk "github.com/pubgo/protoc-gen-openapi/generator/wellknown"
@@ -871,6 +872,11 @@ func (g *OpenAPIv3Generator) addSchemasForMessagesToDocumentV3(d *v3.Document, m
 				}
 				schema.Schema.ReadOnly = outputOnly
 				schema.Schema.WriteOnly = inputOnly
+				if opt, ok := field.Desc.Options().(*descriptorpb.FieldOptions); ok && opt != nil {
+					if opt.Deprecated != nil && *opt.Deprecated {
+						schema.Schema.Deprecated = *opt.Deprecated
+					}
+				}
 
 				// Merge any `Property` annotations with the current
 				extProperty := proto.GetExtension(field.Desc.Options(), v3.E_Property)
