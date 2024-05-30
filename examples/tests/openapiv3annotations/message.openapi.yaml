@@ -25,6 +25,12 @@ paths:
                   required: true
                   schema:
                     type: string
+                - name: Authorization
+                  in: header
+                  description: jwt token
+                  required: true
+                  schema:
+                    type: string
             requestBody:
                 content:
                     application/json:
@@ -40,6 +46,8 @@ paths:
                                 $ref: '#/components/schemas/Message'
             security:
                 - BasicAuth: []
+            x-operation-id: updateMessage
+            abc: def
 components:
     schemas:
         Message:

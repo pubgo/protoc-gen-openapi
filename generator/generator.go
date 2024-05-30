@@ -764,6 +764,39 @@ func (g *OpenAPIv3Generator) addPathsToDocumentV3(d *v3.Document, services []*pr
 						proto.Merge(op, extOperation.(*v3.Operation))
 					}
 
+					for _, v := range op.Parameters {
+						if v.Oneof == nil {
+							continue
+						}
+
+						switch v1 := v.Oneof.(type) {
+						case *v3.ParameterOrReference_Parameter:
+							p := v1.Parameter
+							if p.In == "header" {
+								if p.Schema == nil {
+									p.Schema = wk.NewStringSchema()
+								}
+							}
+						}
+					}
+
+					var tags []string
+					for _, v := range op.Tags {
+						if strings.Contains(v, "=") {
+							tagNames := strings.SplitN(v, "=", 2)
+							op.SpecificationExtension = append(op.SpecificationExtension, &v3.NamedAny{
+								Name: strings.TrimSpace(tagNames[0]),
+								Value: &v3.Any{
+									Yaml: strings.TrimSpace(tagNames[1]),
+								},
+							})
+							continue
+						}
+
+						tags = append(tags, v)
+					}
+
+					op.Tags = tags
 					g.addOperationToDocumentV3(d, op, path2, methodName)
 				}
 			}

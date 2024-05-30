@@ -23,72 +23,90 @@ import "openapiv3/annotations.proto";
 option go_package = "github.com/google/gnostic/apps/protoc-gen-openapi/examples/tests/openapiv3annotations/message/v1;message";
 
 option (openapi.v3.document) = {
-  info: {
-    title: "Title from annotation";
-    version: "Version from annotation";
-    description: "Description from annotation";
-    contact: {
-      name: "Contact Name";
-      url: "https://github.com/google/gnostic";
-      email: "gnostic@google.com";
-    }
-    license: {
-      name: "Apache License";
-      url: "https://github.com/google/gnostic/blob/master/LICENSE";
-    }
-  }
-  components: {
-    security_schemes: {
-      additional_properties: [
-        {
-          name: "BasicAuth";
-          value: {
-            security_scheme: {
-              type: "http";
-              scheme: "basic";
-            }
-          }
+    info: {
+        title: "Title from annotation";
+        version: "Version from annotation";
+        description: "Description from annotation";
+        contact: {
+            name: "Contact Name";
+            url: "https://github.com/google/gnostic";
+            email: "gnostic@google.com";
         }
-      ]
+        license: {
+            name: "Apache License";
+            url: "https://github.com/google/gnostic/blob/master/LICENSE";
+        }
     }
-  }
+    components: {
+        security_schemes: {
+            additional_properties: [
+                {
+                    name: "BasicAuth";
+                    value: {
+                        security_scheme: {
+                            type: "http";
+                            scheme: "basic";
+                        }
+                    }
+                }
+            ]
+        }
+    }
 };
 
 service Messaging1 {
-  rpc UpdateMessage(Message) returns(Message) {
-    option(google.api.http) = {
-        patch: "/v1/messages/{message_id}"
-        body: "*"
-    };
-    option(openapi.v3.operation) = {
-        security: [
-          {
-            additional_properties: [
-              {
-                name: "BasicAuth";
-                value: {}
-              }
+    rpc UpdateMessage (Message) returns (Message) {
+        option (google.api.http) = {
+            patch: "/v1/messages/{message_id}"
+            body: "*"
+        };
+
+        option (openapi.v3.operation) = {
+            tags: ["abc=def"],
+            specification_extension: [
+                {
+                    name: "x-operation-id";
+                    value: {
+                        yaml: "updateMessage"
+                    };
+                }
+            ],
+            parameters: [{
+                parameter: {
+                    description: "jwt token",
+                    in: "header",
+                    name: "Authorization",
+                    required: true,
+                },
+            }],
+            security: [
+                {
+                    additional_properties: [
+                        {
+                            name: "BasicAuth";
+                            value: {}
+                        }
+                    ]
+                }
             ]
-          }
-        ]
-    };
-  }
+        };
+    }
 }
 
 service Messaging2 {
-  rpc UpdateMessage(Message) returns (Message) {}
+    rpc UpdateMessage (Message) returns (Message) {}
 }
 
 message Message {
-  option (openapi.v3.schema) = {
-    title: "This is an overridden message schema title";
-  };
+    option (openapi.v3.schema) = {
+        title: "This is an overridden message schema title";
+    };
 
-  int64 id = 1;
-  string label = 2 [
-    (openapi.v3.property) = {
-      title: "this is an overriden field schema title";
-      max_length: 255;
-    }
-  ];
+    int64 id = 1;
+    string label = 2 [
+        (openapi.v3.property) = {
+            title: "this is an overriden field schema title";
+            max_length: 255;
+        }
+    ];
 }
