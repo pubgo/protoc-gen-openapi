@@ -1,0 +1,41 @@
+# Generated with protoc-gen-openapi
+# https://github.com/pubgo/protoc-gen-openapi
+
+openapi: 3.0.3
+info:
+    title: openapi examples
+    version: 0.0.1
+paths:
+    /v1/messages:deprecated:
+        put:
+            tags:
+                - Messaging1
+            operationId: Messaging1_UpdateMessage
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/Messagedeprecated'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Messagedeprecated'
+components:
+    schemas:
+        Messagedeprecated:
+            type: object
+            properties:
+                id:
+                    type: string
+                label:
+                    deprecated: true
+                    type: string
+                label1:
+                    deprecated: true
+                    type: string
+tags:
+    - name: Messaging1
