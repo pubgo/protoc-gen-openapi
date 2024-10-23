@@ -94,7 +94,37 @@ service Messaging1 {
 }
 
 service Messaging2 {
-    rpc UpdateMessage (Message) returns (Message) {}
+    rpc UpdateMessage (Message) returns (Message) {
+        option (openapi.v3.operation) = {
+            tags: ["abc=def"],
+            specification_extension: [
+                {
+                    name: "x-operation-id";
+                    value: {
+                        yaml: "updateMessage"
+                    };
+                }
+            ],
+            parameters: [{
+                parameter: {
+                    description: "jwt token",
+                    in: "header",
+                    name: "Authorization",
+                    required: true,
+                },
+            }],
+            security: [
+                {
+                    additional_properties: [
+                        {
+                            name: "BasicAuth";
+                            value: {}
+                        }
+                    ]
+                }
+            ]
+        };
+    }
 }
 
 message Message {
