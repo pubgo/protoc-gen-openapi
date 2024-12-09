@@ -25,14 +25,14 @@ import (
 
 	v3 "github.com/google/gnostic-models/openapiv3"
 	"google.golang.org/genproto/googleapis/api/annotations"
-	status_pb "google.golang.org/genproto/googleapis/rpc/status"
+	statuspb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
-	any_pb "google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/anypb"
 
-	wk "github.com/pubgo/protoc-gen-openapi/generator/wellknown"
+	"github.com/pubgo/protoc-gen-openapi/generator/wellknown"
 )
 
 type Configuration struct {
@@ -55,8 +55,8 @@ const (
 // to know the message descriptors for google.rpc.Status as well
 // as google.protobuf.Any.
 var (
-	statusProtoDesc = (&status_pb.Status{}).ProtoReflect().Descriptor()
-	anyProtoDesc    = (&any_pb.Any{}).ProtoReflect().Descriptor()
+	statusProtoDesc = (&statuspb.Status{}).ProtoReflect().Descriptor()
+	anyProtoDesc    = (&anypb.Any{}).ProtoReflect().Descriptor()
 )
 
 // OpenAPIv3Generator holds internal state needed to generate an OpenAPIv3 document for a transcoded Protocol Buffer service.
@@ -579,11 +579,11 @@ func (g *OpenAPIv3Generator) buildOperationV3(
 	// Add the default response if needed
 	if *g.conf.DefaultResponse {
 		anySchemaName := g.reflect.formatMessageName(anyProtoDesc)
-		anySchema := wk.NewGoogleProtobufAnySchema(anySchemaName)
+		anySchema := wellknown.NewGoogleProtobufAnySchema(anySchemaName)
 		g.addSchemaToDocumentV3(d, anySchema)
 
 		statusSchemaName := g.reflect.formatMessageName(statusProtoDesc)
-		statusSchema := wk.NewGoogleRpcStatusSchema(statusSchemaName, anySchemaName)
+		statusSchema := wellknown.NewGoogleRpcStatusSchema(statusSchemaName, anySchemaName)
 		g.addSchemaToDocumentV3(d, statusSchema)
 
 		defaultResponse := &v3.NamedResponseOrReference{
@@ -592,7 +592,7 @@ func (g *OpenAPIv3Generator) buildOperationV3(
 				Oneof: &v3.ResponseOrReference_Response{
 					Response: &v3.Response{
 						Description: "Default error response",
-						Content: wk.NewApplicationJsonMediaType(&v3.SchemaOrReference{
+						Content: wellknown.NewApplicationJsonMediaType(&v3.SchemaOrReference{
 							Oneof: &v3.SchemaOrReference_Reference{
 								Reference: &v3.Reference{XRef: "#/components/schemas/" + statusSchemaName},
 							},
@@ -774,7 +774,7 @@ func (g *OpenAPIv3Generator) addPathsToDocumentV3(d *v3.Document, services []*pr
 							p := v1.Parameter
 							if p.In == "header" {
 								if p.Schema == nil {
-									p.Schema = wk.NewStringSchema()
+									p.Schema = wellknown.NewStringSchema()
 								}
 							}
 						}
@@ -840,15 +840,15 @@ func (g *OpenAPIv3Generator) addSchemasForMessagesToDocumentV3(d *v3.Document, m
 		// `google.protobuf.Value` and `google.protobuf.Any` have special JSON transcoding
 		// so we can't just reflect on the message descriptor.
 		if typeName == ".google.protobuf.Value" {
-			g.addSchemaToDocumentV3(d, wk.NewGoogleProtobufValueSchema(schemaName))
+			g.addSchemaToDocumentV3(d, wellknown.NewGoogleProtobufValueSchema(schemaName))
 			continue
 		} else if typeName == ".google.protobuf.Any" {
-			g.addSchemaToDocumentV3(d, wk.NewGoogleProtobufAnySchema(schemaName))
+			g.addSchemaToDocumentV3(d, wellknown.NewGoogleProtobufAnySchema(schemaName))
 			continue
 		} else if typeName == ".google.rpc.Status" {
 			anySchemaName := g.reflect.formatMessageName(anyProtoDesc)
-			g.addSchemaToDocumentV3(d, wk.NewGoogleProtobufAnySchema(anySchemaName))
-			g.addSchemaToDocumentV3(d, wk.NewGoogleRpcStatusSchema(schemaName, anySchemaName))
+			g.addSchemaToDocumentV3(d, wellknown.NewGoogleProtobufAnySchema(anySchemaName))
+			g.addSchemaToDocumentV3(d, wellknown.NewGoogleRpcStatusSchema(schemaName, anySchemaName))
 			continue
 		}
 
