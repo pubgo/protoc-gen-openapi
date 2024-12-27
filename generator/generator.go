@@ -122,15 +122,17 @@ func (g *OpenAPIv3Generator) buildDocumentV3() *v3.Document {
 	// track of which schemas are referenced in the response so we can
 	// add them later.
 	for _, file := range g.inputFiles {
-		if file.Generate {
-			// Merge any `Document` annotations with the current
-			extDocument := proto.GetExtension(file.Desc.Options(), v3.E_Document)
-			if extDocument != nil {
-				proto.Merge(d, extDocument.(*v3.Document))
-			}
-
-			g.addPathsToDocumentV3(d, file.Services)
+		if !file.Generate {
+			continue
 		}
+
+		// Merge any `Document` annotations with the current
+		extDocument := proto.GetExtension(file.Desc.Options(), v3.E_Document)
+		if extDocument != nil {
+			proto.Merge(d, extDocument.(*v3.Document))
+		}
+
+		g.addPathsToDocumentV3(d, file.Services)
 	}
 
 	// While we have required schemas left to generate, go through the files again
@@ -705,8 +707,9 @@ func (g *OpenAPIv3Generator) addOperationToDocumentV3(d *v3.Document, op *v3.Ope
 // addPathsToDocumentV3 adds paths from a specified file descriptor.
 func (g *OpenAPIv3Generator) addPathsToDocumentV3(d *v3.Document, services []*protogen.Service) {
 	for _, service := range services {
-		annotationsCount := 0
+		extService, _ := proto.GetExtension(service.Desc.Options(), E_Service).(*Service)
 
+		annotationsCount := 0
 		for _, method := range service.Methods {
 			comment := g.filterCommentString(method.Comments.Leading)
 			inputMessage := method.Input
@@ -762,6 +765,18 @@ func (g *OpenAPIv3Generator) addPathsToDocumentV3(d *v3.Document, services []*pr
 					extOperation := proto.GetExtension(method.Desc.Options(), v3.E_Operation)
 					if extOperation != nil {
 						proto.Merge(op, extOperation.(*v3.Operation))
+					}
+
+					// Merge any `Service` annotations with the current
+					if extService != nil {
+						op.Parameters = append(op.Parameters, extService.Parameters...)
+						op.SpecificationExtension = append(op.SpecificationExtension, extService.SpecificationExtension...)
+						op.Tags = append(op.Tags, extService.Tags...)
+						op.Servers = append(op.Servers, extService.Servers...)
+						op.Security = append(op.Security, extService.Security...)
+						if extService.ExternalDocs != nil {
+							proto.Merge(op.ExternalDocs, extService.ExternalDocs)
+						}
 					}
 
 					for _, v := range op.Parameters {

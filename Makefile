@@ -15,3 +15,8 @@ pb_test:
 
 install_gnostic:
 	go install github.com/google/gnostic/cmd/protoc-gen-openapi@v0.7.0
+
+protobuf:
+	protobuild vendor
+	protobuild gen
+	rm -rf github.com

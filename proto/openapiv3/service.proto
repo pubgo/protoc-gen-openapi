@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package openapi.v3;
+
+import "openapiv3/OpenAPIv3.proto";
+import "google/protobuf/descriptor.proto";
+
+// The Go package name.
+option go_package = "./generator;generator";
+
+extend google.protobuf.ServiceOptions {
+  Service service = 1144;
+}
+
+message Service {
+  repeated string tags = 1;
+  ExternalDocs external_docs = 2;
+  repeated ParameterOrReference parameters = 3;
+  repeated SecurityRequirement security = 4;
+  repeated Server servers = 5;
+  repeated NamedAny specification_extension = 6;
+}

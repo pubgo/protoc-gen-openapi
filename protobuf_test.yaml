@@ -1,4 +1,4 @@
-checksum: 3e8071aa4cd13e19389b662bc68aa516312dbf81
+checksum: 408bba623d90fde1570ce79d5e008862bd768015
 vendor: .proto
 base:
   paths: import

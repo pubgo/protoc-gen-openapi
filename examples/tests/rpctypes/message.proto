@@ -20,10 +20,18 @@ package tests.rpctypes.message.v1;
 import "google/protobuf/empty.proto";
 import "google/api/annotations.proto";
 import "google/rpc/status.proto";
+import "openapiv3/service.proto";
 
 option go_package = "github.com/google/gnostic/apps/protoc-gen-openapi/examples/tests/rpctypes/message/v1;message";
 
 service Status {
+  option(openapi.v3.service).specification_extension={
+    name: "x-folder"
+    value: {
+      yaml: "api/test"
+    }
+  };
+
   rpc GetStatus(google.protobuf.Empty) returns (google.rpc.Status) {
     option(google.api.http) = {
         get: "/v1/status"

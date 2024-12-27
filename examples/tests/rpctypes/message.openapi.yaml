@@ -18,6 +18,7 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Status'
+            x-folder: api/test
 components:
     schemas:
         GoogleProtobufAny:
