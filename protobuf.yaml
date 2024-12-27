@@ -1,5 +1,11 @@
-checksum: 3e8071aa4cd13e19389b662bc68aa516312dbf81
+checksum: 408bba623d90fde1570ce79d5e008862bd768015
 vendor: .proto
+base:
+  paths: import
+root:
+  - proto
+includes:
+  - proto
 deps:
   - name: google
     url: github.com/googleapis/googleapis
@@ -7,3 +13,5 @@ deps:
     version: v0.0.0-20220601021915-4e0282f92e4e
   - name: google/protobuf
     url: /usr/local/include/google/protobuf
+plugins:
+  - name: go

@@ -23,7 +23,7 @@ import (
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	wk "github.com/pubgo/protoc-gen-openapi/generator/wellknown"
+	"github.com/pubgo/protoc-gen-openapi/generator/wellknown"
 )
 
 const (
@@ -90,10 +90,10 @@ func (r *OpenAPIv3Reflector) responseContentForMessage(message protoreflect.Mess
 	}
 
 	if typeName == ".google.api.HttpBody" {
-		return "200", wk.NewGoogleApiHttpBodyMediaType()
+		return "200", wellknown.NewGoogleApiHttpBodyMediaType()
 	}
 
-	return "200", wk.NewApplicationJsonMediaType(r.schemaOrReferenceForMessage(message))
+	return "200", wellknown.NewApplicationJsonMediaType(r.schemaOrReferenceForMessage(message))
 }
 
 func (r *OpenAPIv3Reflector) schemaReferenceForMessage(message protoreflect.MessageDescriptor) string {
@@ -110,44 +110,44 @@ func (r *OpenAPIv3Reflector) schemaOrReferenceForMessage(message protoreflect.Me
 	typeName := fullMessageTypeName(message)
 	switch typeName {
 	case ".google.api.HttpBody":
-		return wk.NewGoogleApiHttpBodySchema()
+		return wellknown.NewGoogleApiHttpBodySchema()
 
 	case ".google.protobuf.Timestamp":
-		return wk.NewGoogleProtobufTimestampSchema()
+		return wellknown.NewGoogleProtobufTimestampSchema()
 
 	case ".google.protobuf.Duration":
-		return wk.NewGoogleProtobufDurationSchema()
+		return wellknown.NewGoogleProtobufDurationSchema()
 
 	case ".google.type.Date":
-		return wk.NewGoogleTypeDateSchema()
+		return wellknown.NewGoogleTypeDateSchema()
 
 	case ".google.type.DateTime":
-		return wk.NewGoogleTypeDateTimeSchema()
+		return wellknown.NewGoogleTypeDateTimeSchema()
 
 	case ".google.protobuf.FieldMask":
-		return wk.NewGoogleProtobufFieldMaskSchema()
+		return wellknown.NewGoogleProtobufFieldMaskSchema()
 
 	case ".google.protobuf.Struct":
-		return wk.NewGoogleProtobufStructSchema()
+		return wellknown.NewGoogleProtobufStructSchema()
 
 	case ".google.protobuf.Empty":
 		// Empty is closer to JSON undefined than null, so ignore this field
 		return nil //&v3.SchemaOrReference{Oneof: &v3.SchemaOrReference_Schema{Schema: &v3.Schema{Type: "null"}}}
 
 	case ".google.protobuf.BoolValue":
-		return wk.NewBooleanSchema()
+		return wellknown.NewBooleanSchema()
 
 	case ".google.protobuf.BytesValue":
-		return wk.NewBytesSchema()
+		return wellknown.NewBytesSchema()
 
 	case ".google.protobuf.Int32Value", ".google.protobuf.UInt32Value":
-		return wk.NewIntegerSchema(getValueKind(message))
+		return wellknown.NewIntegerSchema(getValueKind(message))
 
 	case ".google.protobuf.StringValue", ".google.protobuf.Int64Value", ".google.protobuf.UInt64Value":
-		return wk.NewStringSchema()
+		return wellknown.NewStringSchema()
 
 	case ".google.protobuf.FloatValue", ".google.protobuf.DoubleValue":
-		return wk.NewNumberSchema(getValueKind(message))
+		return wellknown.NewNumberSchema(getValueKind(message))
 
 	default:
 		ref := r.schemaReferenceForMessage(message)
@@ -180,40 +180,40 @@ func (r *OpenAPIv3Reflector) schemaOrReferenceForField(field *protogen.Field, de
 			//
 			// So we need to find the `value` field in the `MapFieldEntry` message and
 			// then return a MapFieldEntry schema using the schema for the `value` field
-			return wk.NewGoogleProtobufMapFieldEntrySchema(r.schemaOrReferenceForField(field, desc.MapValue()))
+			return wellknown.NewGoogleProtobufMapFieldEntrySchema(r.schemaOrReferenceForField(field, desc.MapValue()))
 		} else {
 			kindSchema = r.schemaOrReferenceForMessage(desc.Message())
 		}
 
 	case protoreflect.StringKind:
-		kindSchema = wk.NewStringSchema()
+		kindSchema = wellknown.NewStringSchema()
 
 	case protoreflect.Int32Kind, protoreflect.Sint32Kind, protoreflect.Uint32Kind,
 		protoreflect.Sfixed32Kind, protoreflect.Fixed32Kind:
-		kindSchema = wk.NewIntegerSchema(kind.String())
+		kindSchema = wellknown.NewIntegerSchema(kind.String())
 
 	case protoreflect.Int64Kind, protoreflect.Sint64Kind, protoreflect.Uint64Kind,
 		protoreflect.Sfixed64Kind, protoreflect.Fixed64Kind:
-		kindSchema = wk.NewStringSchema()
+		kindSchema = wellknown.NewStringSchema()
 
 	case protoreflect.EnumKind:
-		kindSchema = wk.NewEnumSchema(r.conf.EnumType, field)
+		kindSchema = wellknown.NewEnumSchema(r.conf.EnumType, field)
 
 	case protoreflect.BoolKind:
-		kindSchema = wk.NewBooleanSchema()
+		kindSchema = wellknown.NewBooleanSchema()
 
 	case protoreflect.FloatKind, protoreflect.DoubleKind:
-		kindSchema = wk.NewNumberSchema(kind.String())
+		kindSchema = wellknown.NewNumberSchema(kind.String())
 
 	case protoreflect.BytesKind:
-		kindSchema = wk.NewBytesSchema()
+		kindSchema = wellknown.NewBytesSchema()
 
 	default:
 		log.Printf("(TODO) Unsupported field type: %+v", fullMessageTypeName(field.Desc.Message()))
 	}
 
 	if field.Desc.IsList() {
-		kindSchema = wk.NewListSchema(kindSchema)
+		kindSchema = wellknown.NewListSchema(kindSchema)
 	}
 
 	return kindSchema
