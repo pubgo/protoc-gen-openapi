@@ -1,7 +1,5 @@
 checksum: 408bba623d90fde1570ce79d5e008862bd768015
 vendor: .proto
-base:
-  paths: import
 root:
   - proto
 includes:
