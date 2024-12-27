@@ -761,12 +761,6 @@ func (g *OpenAPIv3Generator) addPathsToDocumentV3(d *v3.Document, services []*pr
 					op, path2 := g.buildOperationV3(
 						d, operationID, service.GoName, comment, defaultHost, path, body, inputMessage, outputMessage)
 
-					// Merge any `Operation` annotations with the current
-					extOperation := proto.GetExtension(method.Desc.Options(), v3.E_Operation)
-					if extOperation != nil {
-						proto.Merge(op, extOperation.(*v3.Operation))
-					}
-
 					// Merge any `Service` annotations with the current
 					if extService != nil {
 						op.Parameters = append(op.Parameters, extService.Parameters...)
@@ -777,6 +771,12 @@ func (g *OpenAPIv3Generator) addPathsToDocumentV3(d *v3.Document, services []*pr
 						if extService.ExternalDocs != nil {
 							proto.Merge(op.ExternalDocs, extService.ExternalDocs)
 						}
+					}
+					
+					// Merge any `Operation` annotations with the current
+					extOperation := proto.GetExtension(method.Desc.Options(), v3.E_Operation)
+					if extOperation != nil {
+						proto.Merge(op, extOperation.(*v3.Operation))
 					}
 
 					for _, v := range op.Parameters {
@@ -809,6 +809,16 @@ func (g *OpenAPIv3Generator) addPathsToDocumentV3(d *v3.Document, services []*pr
 						}
 
 						tags = append(tags, v)
+					}
+
+					var extMap = make(map[string]*v3.NamedAny)
+					for _, v := range op.SpecificationExtension {
+						extMap[v.Name] = v
+					}
+
+					op.SpecificationExtension = op.SpecificationExtension[:0]
+					for _, v := range extMap {
+						op.SpecificationExtension = append(op.SpecificationExtension, v)
 					}
 
 					op.Tags = tags
