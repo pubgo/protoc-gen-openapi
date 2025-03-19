@@ -179,7 +179,7 @@ func NewGoogleProtobufDurationSchema() *v3.SchemaOrReference {
 	}
 }
 
-// google.type.Date is serialized as a string
+// NewGoogleTypeDateSchema google.type.Date is serialized as a string
 func NewGoogleTypeDateSchema() *v3.SchemaOrReference {
 	return &v3.SchemaOrReference{
 		Oneof: &v3.SchemaOrReference_Schema{

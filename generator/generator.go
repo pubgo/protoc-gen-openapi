@@ -18,7 +18,6 @@ package generator
 import (
 	"fmt"
 	"log"
-	"net/url"
 	"regexp"
 	"sort"
 	"strings"
@@ -90,6 +89,26 @@ func (g *OpenAPIv3Generator) Run(outputFile *protogen.GeneratedFile) error {
 
 // buildDocumentV3 builds an OpenAPIv3 document for a plugin request.
 func (g *OpenAPIv3Generator) buildDocumentV3() *v3.Document {
+	// 初始化文档
+	d := g.initializeDocument()
+
+	// 处理文件
+	g.processFiles(d)
+
+	// 处理服务信息
+	g.processServiceInfo(d)
+
+	// 处理服务器信息
+	g.processServers(d)
+
+	// 排序文档
+	g.sortDocument(d)
+
+	return d
+}
+
+// initializeDocument initializes the document with basic information
+func (g *OpenAPIv3Generator) initializeDocument() *v3.Document {
 	d := &v3.Document{}
 
 	d.Openapi = "3.0.3"
@@ -106,9 +125,11 @@ func (g *OpenAPIv3Generator) buildDocumentV3() *v3.Document {
 		},
 	}
 
-	// Go through the files and add the services to the documents, keeping
-	// track of which schemas are referenced in the response so we can
-	// add them later.
+	return d
+}
+
+// processFiles processes all files and adds their paths to the document
+func (g *OpenAPIv3Generator) processFiles(d *v3.Document) {
 	for _, file := range g.inputFiles {
 		if !file.Generate {
 			continue
@@ -122,7 +143,10 @@ func (g *OpenAPIv3Generator) buildDocumentV3() *v3.Document {
 
 		g.addPathsToDocumentV3(d, file.Services)
 	}
+}
 
+// processServiceInfo processes service information and adds it to the document
+func (g *OpenAPIv3Generator) processServiceInfo(d *v3.Document) {
 	// While we have required schemas left to generate, go through the files again
 	// looking for the related message and adding them to the document if required.
 	for len(g.reflect.requiredSchemas) > 0 {
@@ -144,7 +168,10 @@ func (g *OpenAPIv3Generator) buildDocumentV3() *v3.Document {
 		}
 		d.Tags[0].Description = ""
 	}
+}
 
+// processServers processes server information and adds it to the document
+func (g *OpenAPIv3Generator) processServers(d *v3.Document) {
 	var allServers []string
 
 	// If paths methods has servers, but they're all the same, then move servers to path level
@@ -212,7 +239,10 @@ func (g *OpenAPIv3Generator) buildDocumentV3() *v3.Document {
 			path.Value.Servers = nil
 		}
 	}
+}
 
+// sortDocument sorts the document tags and paths
+func (g *OpenAPIv3Generator) sortDocument(d *v3.Document) {
 	// Sort the tags.
 	{
 		pairs := d.Tags
@@ -239,7 +269,6 @@ func (g *OpenAPIv3Generator) buildDocumentV3() *v3.Document {
 		})
 		d.Components.Schemas.AdditionalProperties = pairs
 	}
-	return d
 }
 
 // filterCommentString removes linter rules from comments.
@@ -441,226 +470,7 @@ func (g *OpenAPIv3Generator) buildOperationV3(
 	inputMessage *protogen.Message,
 	outputMessage *protogen.Message,
 ) (*v3.Operation, string) {
-	// coveredParameters tracks the parameters that have been used in the body or path.
-	coveredParameters := make([]string, 0)
-	if bodyField != "" {
-		coveredParameters = append(coveredParameters, bodyField)
-	}
-	// Initialize the list of operation parameters.
-	var parameters []*v3.ParameterOrReference
-
-	// Find simple path parameters like {id}
-	if allMatches := g.pathPattern.FindAllStringSubmatch(path, -1); allMatches != nil {
-		for _, matches := range allMatches {
-			// Add the value to the list of covered parameters.
-			coveredParameters = append(coveredParameters, matches[1])
-			pathParameter := g.findAndFormatFieldName(matches[1], inputMessage)
-			path = strings.Replace(path, matches[1], pathParameter, 1)
-
-			// Add the path parameters to the operation parameters.
-			var fieldSchema *v3.SchemaOrReference
-
-			var fieldDescription string
-			field := g.findField(pathParameter, inputMessage)
-			if field != nil {
-				fieldSchema = g.reflect.schemaOrReferenceForField(field, nil)
-				fieldDescription = g.filterCommentString(field.Comments.Leading)
-			} else {
-				// If field does not exist, it is safe to set it to string, as it is ignored downstream
-				fieldSchema = &v3.SchemaOrReference{
-					Oneof: &v3.SchemaOrReference_Schema{
-						Schema: &v3.Schema{
-							Type: "string",
-						},
-					},
-				}
-			}
-
-			parameters = append(parameters,
-				&v3.ParameterOrReference{
-					Oneof: &v3.ParameterOrReference_Parameter{
-						Parameter: &v3.Parameter{
-							Name:        pathParameter,
-							In:          "path",
-							Description: fieldDescription,
-							Required:    true,
-							Schema:      fieldSchema,
-						},
-					},
-				})
-		}
-	}
-
-	// Find named path parameters like {name=shelves/*}
-	if matches := g.namedPathPattern.FindStringSubmatch(path); matches != nil {
-		// Build a list of named path parameters.
-		namedPathParameters := make([]string, 0)
-
-		// Add the "name=" "name" value to the list of covered parameters.
-		coveredParameters = append(coveredParameters, matches[1])
-		// Convert the path from the starred form to use named path parameters.
-		starredPath := matches[2]
-		parts := strings.Split(starredPath, "/")
-		// The starred path is assumed to be in the form "things/*/otherthings/*".
-		// We want to convert it to "things/{thingsId}/otherthings/{otherthingsId}".
-		for i := 0; i < len(parts)-1; i += 2 {
-			section := parts[i]
-			namedPathParameter := g.findAndFormatFieldName(section, inputMessage)
-			namedPathParameter = singular(namedPathParameter)
-			parts[i+1] = "{" + namedPathParameter + "}"
-			namedPathParameters = append(namedPathParameters, namedPathParameter)
-		}
-		// Rewrite the path to use the path parameters.
-		newPath := strings.Join(parts, "/")
-		path = strings.Replace(path, matches[0], newPath, 1)
-
-		// Add the named path parameters to the operation parameters.
-		for _, namedPathParameter := range namedPathParameters {
-			parameters = append(parameters,
-				&v3.ParameterOrReference{
-					Oneof: &v3.ParameterOrReference_Parameter{
-						Parameter: &v3.Parameter{
-							Name:        namedPathParameter,
-							In:          "path",
-							Required:    true,
-							Description: "The " + namedPathParameter + " id.",
-							Schema: &v3.SchemaOrReference{
-								Oneof: &v3.SchemaOrReference_Schema{
-									Schema: &v3.Schema{
-										Type: "string",
-									},
-								},
-							},
-						},
-					},
-				})
-		}
-	}
-
-	// Add any unhandled fields in the request message as query parameters.
-	if bodyField != "*" && string(inputMessage.Desc.FullName()) != "google.api.HttpBody" {
-		for _, field := range inputMessage.Fields {
-			fieldName := string(field.Desc.Name())
-			if !contains(coveredParameters, fieldName) && fieldName != bodyField {
-				fieldParams := g.buildQueryParamsV3(field)
-				parameters = append(parameters, fieldParams...)
-			}
-		}
-	}
-
-	// Create the response.
-	name, content := g.reflect.responseContentForMessage(outputMessage.Desc)
-	responses := &v3.Responses{
-		ResponseOrReference: []*v3.NamedResponseOrReference{
-			{
-				Name: name,
-				Value: &v3.ResponseOrReference{
-					Oneof: &v3.ResponseOrReference_Response{
-						Response: &v3.Response{
-							Description: "OK",
-							Content:     content,
-						},
-					},
-				},
-			},
-		},
-	}
-
-	// Add the default response if needed
-	if *g.conf.DefaultResponse {
-		anySchemaName := g.reflect.formatMessageName(anyProtoDesc)
-		anySchema := wellknown.NewGoogleProtobufAnySchema(anySchemaName)
-		g.addSchemaToDocumentV3(d, anySchema)
-
-		statusSchemaName := g.reflect.formatMessageName(statusProtoDesc)
-		statusSchema := wellknown.NewGoogleRpcStatusSchema(statusSchemaName, anySchemaName)
-		g.addSchemaToDocumentV3(d, statusSchema)
-
-		defaultResponse := &v3.NamedResponseOrReference{
-			Name: "default",
-			Value: &v3.ResponseOrReference{
-				Oneof: &v3.ResponseOrReference_Response{
-					Response: &v3.Response{
-						Description: "Default error response",
-						Content: wellknown.NewApplicationJsonMediaType(&v3.SchemaOrReference{
-							Oneof: &v3.SchemaOrReference_Reference{
-								Reference: &v3.Reference{XRef: "#/components/schemas/" + statusSchemaName},
-							},
-						}),
-					},
-				},
-			},
-		}
-
-		responses.ResponseOrReference = append(responses.ResponseOrReference, defaultResponse)
-	}
-
-	// Create the operation.
-	op := &v3.Operation{
-		Tags:        []string{tagName},
-		Description: description,
-		OperationId: operationID,
-		Parameters:  parameters,
-		Responses:   responses,
-	}
-
-	if defaultHost != "" {
-		hostURL, err := url.Parse(defaultHost)
-		if err == nil {
-			hostURL.Scheme = "https"
-			op.Servers = append(op.Servers, &v3.Server{Url: hostURL.String()})
-		}
-	}
-
-	// If a body field is specified, we need to pass a message as the request body.
-	if bodyField != "" {
-		var requestSchema *v3.SchemaOrReference
-		if bodyField == "*" {
-			// Pass the entire request message as the request body.
-			requestSchema = g.reflect.schemaOrReferenceForMessage(inputMessage.Desc)
-		} else {
-			// If body refers to a message field, use that type.
-			for _, field := range inputMessage.Fields {
-				if string(field.Desc.Name()) == bodyField {
-					switch field.Desc.Kind() {
-					case protoreflect.StringKind:
-						requestSchema = &v3.SchemaOrReference{
-							Oneof: &v3.SchemaOrReference_Schema{
-								Schema: &v3.Schema{
-									Type: "string",
-								},
-							},
-						}
-
-					case protoreflect.MessageKind:
-						requestSchema = g.reflect.schemaOrReferenceForMessage(field.Message.Desc)
-					default:
-						log.Printf("unsupported field type %+v", field.Desc)
-					}
-					break
-				}
-			}
-		}
-
-		op.RequestBody = &v3.RequestBodyOrReference{
-			Oneof: &v3.RequestBodyOrReference_RequestBody{
-				RequestBody: &v3.RequestBody{
-					Required: true,
-					Content: &v3.MediaTypes{
-						AdditionalProperties: []*v3.NamedMediaType{
-							{
-								Name: "application/json",
-								Value: &v3.MediaType{
-									Schema: requestSchema,
-								},
-							},
-						},
-					},
-				},
-			},
-		}
-	}
-	return op, path
+	return g.buildOperation(d, operationID, tagName, description, defaultHost, path, bodyField, inputMessage, outputMessage)
 }
 
 // addOperationToDocumentV3 adds an operation to the specified path/method.
