@@ -4,7 +4,7 @@
 // 	protoc        v5.28.2
 // source: openapiv3/service.proto
 
-package generator
+package model
 
 import (
 	openapiv3 "github.com/google/gnostic-models/openapiv3"

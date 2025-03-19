@@ -17,6 +17,7 @@ package generator
 
 import (
 	"fmt"
+	"github.com/pubgo/protoc-gen-openapi/generator/model"
 	"log"
 	"regexp"
 	"sort"
@@ -505,7 +506,7 @@ func (g *OpenAPIv3Generator) addOperationToDocumentV3(d *v3.Document, op *v3.Ope
 // addPathsToDocumentV3 adds paths from a specified file descriptor.
 func (g *OpenAPIv3Generator) addPathsToDocumentV3(d *v3.Document, services []*protogen.Service) {
 	for _, service := range services {
-		extService, _ := proto.GetExtension(service.Desc.Options(), E_Service).(*Service)
+		extService, _ := proto.GetExtension(service.Desc.Options(), model.E_Service).(*model.Service)
 
 		annotationsCount := 0
 		for _, method := range service.Methods {
