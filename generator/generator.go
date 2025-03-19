@@ -554,75 +554,77 @@ func (g *OpenAPIv3Generator) addPathsToDocumentV3(d *v3.Document, services []*pr
 					path = "unknown-unsupported"
 				}
 
-				if methodName != "" {
-					defaultHost := proto.GetExtension(service.Desc.Options(), annotations.E_DefaultHost).(string)
+				if methodName == "" {
+					continue
+				}
 
-					op, path2 := g.buildOperationV3(
-						d, operationID, service.GoName, comment, defaultHost, path, body, inputMessage, outputMessage)
+				defaultHost := proto.GetExtension(service.Desc.Options(), annotations.E_DefaultHost).(string)
 
-					// Merge any `Service` annotations with the current
-					if extService != nil {
-						op.Parameters = append(op.Parameters, extService.Parameters...)
-						op.SpecificationExtension = append(op.SpecificationExtension, extService.SpecificationExtension...)
-						op.Tags = append(op.Tags, extService.Tags...)
-						op.Servers = append(op.Servers, extService.Servers...)
-						op.Security = append(op.Security, extService.Security...)
-						if extService.ExternalDocs != nil {
-							proto.Merge(op.ExternalDocs, extService.ExternalDocs)
-						}
+				op, path2 := g.buildOperationV3(
+					d, operationID, service.GoName, comment, defaultHost, path, body, inputMessage, outputMessage)
+
+				// Merge any `Service` annotations with the current
+				if extService != nil {
+					op.Parameters = append(op.Parameters, extService.Parameters...)
+					op.SpecificationExtension = append(op.SpecificationExtension, extService.SpecificationExtension...)
+					op.Tags = append(op.Tags, extService.Tags...)
+					op.Servers = append(op.Servers, extService.Servers...)
+					op.Security = append(op.Security, extService.Security...)
+					if extService.ExternalDocs != nil {
+						proto.Merge(op.ExternalDocs, extService.ExternalDocs)
+					}
+				}
+
+				// Merge any `Operation` annotations with the current
+				extOperation := proto.GetExtension(method.Desc.Options(), v3.E_Operation)
+				if extOperation != nil {
+					proto.Merge(op, extOperation.(*v3.Operation))
+				}
+
+				for _, v := range op.Parameters {
+					if v.Oneof == nil {
+						continue
 					}
 
-					// Merge any `Operation` annotations with the current
-					extOperation := proto.GetExtension(method.Desc.Options(), v3.E_Operation)
-					if extOperation != nil {
-						proto.Merge(op, extOperation.(*v3.Operation))
-					}
-
-					for _, v := range op.Parameters {
-						if v.Oneof == nil {
-							continue
-						}
-
-						switch v1 := v.Oneof.(type) {
-						case *v3.ParameterOrReference_Parameter:
-							p := v1.Parameter
-							if p.In == "header" {
-								if p.Schema == nil {
-									p.Schema = wellknown.NewStringSchema()
-								}
+					switch v1 := v.Oneof.(type) {
+					case *v3.ParameterOrReference_Parameter:
+						p := v1.Parameter
+						if p.In == "header" {
+							if p.Schema == nil {
+								p.Schema = wellknown.NewStringSchema()
 							}
 						}
 					}
-
-					var tags []string
-					for _, v := range op.Tags {
-						if strings.Contains(v, "=") {
-							tagNames := strings.SplitN(v, "=", 2)
-							op.SpecificationExtension = append(op.SpecificationExtension, &v3.NamedAny{
-								Name: strings.TrimSpace(tagNames[0]),
-								Value: &v3.Any{
-									Yaml: strings.TrimSpace(tagNames[1]),
-								},
-							})
-							continue
-						}
-
-						tags = append(tags, v)
-					}
-
-					var extMap = make(map[string]*v3.NamedAny)
-					for _, v := range op.SpecificationExtension {
-						extMap[v.Name] = v
-					}
-
-					op.SpecificationExtension = op.SpecificationExtension[:0]
-					for _, v := range extMap {
-						op.SpecificationExtension = append(op.SpecificationExtension, v)
-					}
-
-					op.Tags = tags
-					g.addOperationToDocumentV3(d, op, path2, methodName)
 				}
+
+				var tags []string
+				for _, v := range op.Tags {
+					if strings.Contains(v, "=") {
+						tagNames := strings.SplitN(v, "=", 2)
+						op.SpecificationExtension = append(op.SpecificationExtension, &v3.NamedAny{
+							Name: strings.TrimSpace(tagNames[0]),
+							Value: &v3.Any{
+								Yaml: strings.TrimSpace(tagNames[1]),
+							},
+						})
+						continue
+					}
+
+					tags = append(tags, v)
+				}
+
+				var extMap = make(map[string]*v3.NamedAny)
+				for _, v := range op.SpecificationExtension {
+					extMap[v.Name] = v
+				}
+
+				op.SpecificationExtension = op.SpecificationExtension[:0]
+				for _, v := range extMap {
+					op.SpecificationExtension = append(op.SpecificationExtension, v)
+				}
+
+				op.Tags = tags
+				g.addOperationToDocumentV3(d, op, path2, methodName)
 			}
 		}
 
