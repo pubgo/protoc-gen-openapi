@@ -39,8 +39,11 @@ type OpenAPIv3Reflector struct {
 
 // NewOpenAPIv3Reflector creates a new reflector.
 func NewOpenAPIv3Reflector(conf Configuration) *OpenAPIv3Reflector {
+	cfg := DefaultConfig()
+	cfg = cfg.Merge(conf)
+
 	return &OpenAPIv3Reflector{
-		conf:            conf,
+		conf:            cfg,
 		requiredSchemas: make([]string, 0),
 	}
 }
