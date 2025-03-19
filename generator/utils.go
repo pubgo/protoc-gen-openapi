@@ -18,6 +18,7 @@ package generator
 import (
 	"strings"
 
+	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -53,16 +54,38 @@ func singular(plural string) string {
 	return plural
 }
 
-func getValueKind(message protoreflect.MessageDescriptor) string {
-	valueField := getValueField(message)
-	return valueField.Kind().String()
+// formatMessageName 格式化消息名称
+func formatMessageName(message protoreflect.MessageDescriptor) string {
+	typeName := fullMessageTypeName(message)
+	name := getMessageName(message)
+	if typeName == ".google.protobuf.Value" {
+		name = protobufValueName
+	} else if typeName == ".google.protobuf.Any" {
+		name = protobufAnyName
+	}
+
+	if len(name) > 1 {
+		name = strings.ToUpper(name[0:1]) + name[1:]
+	}
+
+	if len(name) == 1 {
+		name = strings.ToLower(name)
+	}
+
+	return name
 }
 
-func getValueField(message protoreflect.MessageDescriptor) protoreflect.FieldDescriptor {
-	fields := message.Fields()
-	return fields.ByName("value")
+// formatFieldName 格式化字段名称
+func formatFieldName(field protoreflect.FieldDescriptor) string {
+	return field.JSONName()
 }
 
+// fullMessageTypeName 获取完整的消息类型名称
+func fullMessageTypeName(message protoreflect.MessageDescriptor) string {
+	return string(message.FullName())
+}
+
+// getMessageName 获取消息名称
 func getMessageName(message protoreflect.MessageDescriptor) string {
 	prefix := ""
 	parent := message.Parent()
@@ -72,8 +95,32 @@ func getMessageName(message protoreflect.MessageDescriptor) string {
 	return prefix + string(message.Name())
 }
 
-// fullMessageTypeName builds the full type name of a message.
-func fullMessageTypeName(message protoreflect.MessageDescriptor) string {
-	name := getMessageName(message)
-	return "." + string(message.ParentFile().Package()) + "." + name
+// getValueKind 获取值类型
+func getValueKind(message protoreflect.MessageDescriptor) string {
+	valueField := getValueField(message)
+	return valueField.Kind().String()
+}
+
+// getValueField 获取值字段
+func getValueField(message protoreflect.MessageDescriptor) protoreflect.FieldDescriptor {
+	fields := message.Fields()
+	for i := 0; i < fields.Len(); i++ {
+		field := fields.Get(i)
+		if field.Name() == "value" {
+			return field
+		}
+	}
+	return nil
+}
+
+// schemaReferenceForMessage 获取消息的 Schema 引用
+func schemaReferenceForMessage(message protoreflect.MessageDescriptor) string {
+	schemaName := formatMessageName(message)
+	return "#/components/schemas/" + schemaName
+}
+
+// filterCommentString 过滤注释字符串
+func filterCommentString(comment protogen.Comments) string {
+	// TODO: 实现注释过滤逻辑
+	return string(comment)
 }

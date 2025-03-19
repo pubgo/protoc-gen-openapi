@@ -35,18 +35,6 @@ import (
 	"github.com/pubgo/protoc-gen-openapi/generator/wellknown"
 )
 
-type Configuration struct {
-	Version         *string
-	Title           *string
-	Description     *string
-	Naming          *string
-	FQSchemaNaming  *bool
-	EnumType        *string
-	CircularDepth   *int
-	DefaultResponse *bool
-	OutputMode      *string
-}
-
 const (
 	infoURL = "https://github.com/pubgo/protoc-gen-openapi"
 )
@@ -772,7 +760,7 @@ func (g *OpenAPIv3Generator) addPathsToDocumentV3(d *v3.Document, services []*pr
 							proto.Merge(op.ExternalDocs, extService.ExternalDocs)
 						}
 					}
-					
+
 					// Merge any `Operation` annotations with the current
 					extOperation := proto.GetExtension(method.Desc.Options(), v3.E_Operation)
 					if extOperation != nil {

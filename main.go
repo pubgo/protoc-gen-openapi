@@ -40,7 +40,7 @@ var conf = generator.Configuration{
 func main() {
 	flag.Parse()
 
-	protogen.Options{ParamFunc: flag.CommandLine.Set}.Run(func(plugin *protogen.Plugin) error {
+	var run = func(plugin *protogen.Plugin) error {
 		plugin.SupportedFeatures = uint64(pluginpb.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL)
 
 		if *conf.OutputMode == "source_relative" {
@@ -61,5 +61,6 @@ func main() {
 			return generator.NewOpenAPIv3Generator(plugin, conf, plugin.Files).Run(outputFile)
 		}
 		return nil
-	})
+	}
+	protogen.Options{ParamFunc: flag.CommandLine.Set}.Run(run)
 }

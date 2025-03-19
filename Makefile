@@ -21,3 +21,6 @@ protobuf:
 	protobuild gen
 	mv github.com/pubgo/protoc-gen-openapi/generator/service.pb.go ./generator
 	rm -rf github.com
+
+build:
+	go build -o bin/protoc-gen-openapi ./
