@@ -198,60 +198,6 @@ func isHttpBodyMessage(typeName string) bool {
 	return typeName == ".google.api.HttpBody"
 }
 
-// handleSpecialMessageTypes 处理特殊消息类型
-// 参数:
-//   - typeName: 类型全名
-//   - message: 消息描述符
-//
-// 返回值:
-//   - 特殊类型的模式，如果不是特殊类型则返回 nil
-func handleSpecialMessageTypes(typeName string, message protoreflect.MessageDescriptor) *v3.SchemaOrReference {
-	switch typeName {
-	case ".google.api.HttpBody":
-		return wellknown.NewGoogleApiHttpBodySchema()
-
-	case ".google.protobuf.Timestamp":
-		return wellknown.NewGoogleProtobufTimestampSchema()
-
-	case ".google.protobuf.Duration":
-		return wellknown.NewGoogleProtobufDurationSchema()
-
-	case ".google.type.Date":
-		return wellknown.NewGoogleTypeDateSchema()
-
-	case ".google.type.DateTime":
-		return wellknown.NewGoogleTypeDateTimeSchema()
-
-	case ".google.protobuf.FieldMask":
-		return wellknown.NewGoogleProtobufFieldMaskSchema()
-
-	case ".google.protobuf.Struct":
-		return wellknown.NewGoogleProtobufStructSchema()
-
-	case ".google.protobuf.Empty":
-		// Empty 更接近 JSON undefined 而非 null，因此忽略此字段
-		return nil
-
-	case ".google.protobuf.BoolValue":
-		return wellknown.NewBooleanSchema()
-
-	case ".google.protobuf.BytesValue":
-		return wellknown.NewBytesSchema()
-
-	case ".google.protobuf.Int32Value", ".google.protobuf.UInt32Value":
-		return wellknown.NewIntegerSchema(getValueKind(message))
-
-	case ".google.protobuf.StringValue", ".google.protobuf.Int64Value", ".google.protobuf.UInt64Value":
-		return wellknown.NewStringSchema()
-
-	case ".google.protobuf.FloatValue", ".google.protobuf.DoubleValue":
-		return wellknown.NewNumberSchema(getValueKind(message))
-
-	default:
-		return nil
-	}
-}
-
 // handleFieldByKind 根据字段类型处理字段
 // 参数:
 //   - field: 字段

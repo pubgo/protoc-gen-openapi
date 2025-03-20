@@ -17,11 +17,9 @@ package generator
 
 import (
 	v3 "github.com/google/gnostic-models/openapiv3"
+	"github.com/pubgo/protoc-gen-openapi/generator/wellknown"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/reflect/protoreflect"
-	"log"
-
-	"github.com/pubgo/protoc-gen-openapi/generator/wellknown"
 )
 
 const (
@@ -132,26 +130,6 @@ func (r *OpenAPIv3Reflector) responseContentForMessage(message protoreflect.Mess
 	return "200", wellknown.NewApplicationJsonMediaType(r.schemaOrReferenceForMessage(message))
 }
 
-// isEmptyMessage 检查消息是否为 Empty 类型
-// 参数:
-//   - typeName: 类型全名
-//
-// 返回值:
-//   - 是否为 Empty 类型
-func (r *OpenAPIv3Reflector) isEmptyMessage(typeName string) bool {
-	return typeName == ".google.protobuf.Empty"
-}
-
-// isHttpBodyMessage 检查消息是否为 HttpBody 类型
-// 参数:
-//   - typeName: 类型全名
-//
-// 返回值:
-//   - 是否为 HttpBody 类型
-func (r *OpenAPIv3Reflector) isHttpBodyMessage(typeName string) bool {
-	return typeName == ".google.api.HttpBody"
-}
-
 // schemaReferenceForMessage 获取消息的模式引用
 // 参数:
 //   - message: 消息描述符
@@ -196,7 +174,7 @@ func (r *OpenAPIv3Reflector) schemaOrReferenceForMessage(message protoreflect.Me
 //
 // 返回值:
 //   - 特殊类型的模式，如果不是特殊类型则返回 nil
-func (r *OpenAPIv3Reflector) handleSpecialMessageTypes(typeName string, message protoreflect.MessageDescriptor) *v3.SchemaOrReference {
+func handleSpecialMessageTypes(typeName string, message protoreflect.MessageDescriptor) *v3.SchemaOrReference {
 	switch typeName {
 	case ".google.api.HttpBody":
 		return wellknown.NewGoogleApiHttpBodySchema()
@@ -274,55 +252,4 @@ func (r *OpenAPIv3Reflector) schemaOrReferenceForField(field *protogen.Field, de
 	}
 
 	return kindSchema
-}
-
-// handleFieldByKind 根据字段类型处理字段
-// 参数:
-//   - field: 字段
-//   - desc: 字段描述符
-//   - kind: 字段类型
-//
-// 返回值:
-//   - 模式或引用
-func (r *OpenAPIv3Reflector) handleFieldByKind(field *protogen.Field, desc protoreflect.FieldDescriptor, kind protoreflect.Kind) *v3.SchemaOrReference {
-	switch kind {
-	case protoreflect.MessageKind:
-		return r.handleMessageField(field, desc)
-	case protoreflect.StringKind:
-		return wellknown.NewStringSchema()
-	case protoreflect.Int32Kind, protoreflect.Sint32Kind, protoreflect.Uint32Kind,
-		protoreflect.Sfixed32Kind, protoreflect.Fixed32Kind:
-		return wellknown.NewIntegerSchema(kind.String())
-	case protoreflect.Int64Kind, protoreflect.Sint64Kind, protoreflect.Uint64Kind,
-		protoreflect.Sfixed64Kind, protoreflect.Fixed64Kind:
-		return wellknown.NewStringSchema()
-	case protoreflect.EnumKind:
-		return wellknown.NewEnumSchema(r.conf.EnumType, field)
-	case protoreflect.BoolKind:
-		return wellknown.NewBooleanSchema()
-	case protoreflect.FloatKind, protoreflect.DoubleKind:
-		return wellknown.NewNumberSchema(kind.String())
-	case protoreflect.BytesKind:
-		return wellknown.NewBytesSchema()
-	default:
-		log.Printf("(TODO) Unsupported field type: %+v", fullMessageTypeName(field.Desc.Message()))
-		return nil
-	}
-}
-
-// handleMessageField 处理消息类型字段
-// 参数:
-//   - field: 字段
-//   - desc: 字段描述符
-//
-// 返回值:
-//   - 模式或引用
-func (r *OpenAPIv3Reflector) handleMessageField(field *protogen.Field, desc protoreflect.FieldDescriptor) *v3.SchemaOrReference {
-	if desc.IsMap() {
-		// 处理映射类型
-		return wellknown.NewGoogleProtobufMapFieldEntrySchema(r.schemaOrReferenceForField(field, desc.MapValue()))
-	} else {
-		// 处理普通消息类型
-		return r.schemaOrReferenceForMessage(desc.Message())
-	}
 }
