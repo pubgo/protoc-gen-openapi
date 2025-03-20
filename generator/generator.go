@@ -92,7 +92,7 @@ func (g *OpenAPIv3Generator) buildDocumentV3() *v3.Document {
 	d := initializeDocument(g.conf)
 
 	// 处理文件
-	g.processFiles(d)
+	g.processFiles(d, g.inputFiles)
 
 	// 处理服务信息
 	g.processServiceInfo(d)
@@ -107,8 +107,8 @@ func (g *OpenAPIv3Generator) buildDocumentV3() *v3.Document {
 }
 
 // processFiles processes all files and adds their paths to the document
-func (g *OpenAPIv3Generator) processFiles(d *v3.Document) {
-	for _, file := range g.inputFiles {
+func (g *OpenAPIv3Generator) processFiles(d *v3.Document, inputFiles []*protogen.File) {
+	for _, file := range inputFiles {
 		if !file.Generate {
 			continue
 		}
@@ -538,7 +538,7 @@ func (g *OpenAPIv3Generator) buildOperation(
 		OperationId: operationID,
 		Parameters:  parameters,
 		Responses:   g.buildResponses(outputMessage, *g.conf.DefaultResponse, d),
-		Servers:     g.buildServer(defaultHost),
+		Servers:     BuildServer(defaultHost),
 		RequestBody: g.buildRequestBody(bodyField, inputMessage),
 	}
 
@@ -727,7 +727,7 @@ func (g *OpenAPIv3Generator) addPathsToDocumentV3(d *v3.Document, services []*pr
 		}
 
 		if annotationsCount > 0 {
-			g.addServiceTag(d, service)
+			addServiceTag(d, service)
 		}
 	}
 }
@@ -928,7 +928,7 @@ func processOperationTags(op *v3.Operation) {
 }
 
 // addServiceTag adds a service tag to the document
-func (g *OpenAPIv3Generator) addServiceTag(d *v3.Document, service *protogen.Service) {
+func addServiceTag(d *v3.Document, service *protogen.Service) {
 	comment := service.Comments.Leading.String()
 	d.Tags = append(d.Tags, &v3.Tag{Name: service.GoName, Description: comment})
 }

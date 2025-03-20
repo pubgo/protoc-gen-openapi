@@ -16,11 +16,6 @@ import (
 	"net/url"
 )
 
-// buildServer 构建服务器信息
-func (g *OpenAPIv3Generator) buildServer(defaultHost string) []*v3.Server {
-	return BuildServer(defaultHost)
-}
-
 // buildRequestBody 构建请求体
 func (g *OpenAPIv3Generator) buildRequestBody(bodyField string, inputMessage *protogen.Message) *v3.RequestBodyOrReference {
 	return BuildRequestBody(bodyField, inputMessage, g.reflect.schemaOrReferenceForMessage)
