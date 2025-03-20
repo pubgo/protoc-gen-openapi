@@ -578,6 +578,36 @@ func (g *OpenAPIv3Generator) buildPathParameters(path string, inputMessage *prot
 	return parameters, coveredParameters, path
 }
 
+func HandlerParameterOrReference(pathParameter string, inputMessage *protogen.Message, reflect *OpenAPIv3Reflector) *v3.ParameterOrReference {
+	var fieldSchema *v3.SchemaOrReference
+	var fieldDescription string
+	field := findField(pathParameter, inputMessage)
+	if field != nil {
+		fieldSchema = reflect.schemaOrReferenceForField(field, nil)
+		fieldDescription = filterCommentString(field.Comments.Leading)
+	} else {
+		fieldSchema = &v3.SchemaOrReference{
+			Oneof: &v3.SchemaOrReference_Schema{
+				Schema: &v3.Schema{
+					Type: "string",
+				},
+			},
+		}
+	}
+
+	return &v3.ParameterOrReference{
+		Oneof: &v3.ParameterOrReference_Parameter{
+			Parameter: &v3.Parameter{
+				Name:        pathParameter,
+				In:          "path",
+				Description: fieldDescription,
+				Required:    true,
+				Schema:      fieldSchema,
+			},
+		},
+	}
+}
+
 // processSimplePathParameters processes simple path parameters like {id}
 func (g *OpenAPIv3Generator) processSimplePathParameters(
 	path string,
@@ -594,35 +624,7 @@ func (g *OpenAPIv3Generator) processSimplePathParameters(
 		coveredParameters = append(coveredParameters, matches[1])
 		pathParameter := findAndFormatFieldName(&g.conf, matches[1], inputMessage)
 		path = strings.Replace(path, matches[1], pathParameter, 1)
-
-		var fieldSchema *v3.SchemaOrReference
-		var fieldDescription string
-		field := findField(pathParameter, inputMessage)
-		if field != nil {
-			fieldSchema = g.reflect.schemaOrReferenceForField(field, nil)
-			fieldDescription = filterCommentString(field.Comments.Leading)
-		} else {
-			fieldSchema = &v3.SchemaOrReference{
-				Oneof: &v3.SchemaOrReference_Schema{
-					Schema: &v3.Schema{
-						Type: "string",
-					},
-				},
-			}
-		}
-
-		parameters = append(parameters,
-			&v3.ParameterOrReference{
-				Oneof: &v3.ParameterOrReference_Parameter{
-					Parameter: &v3.Parameter{
-						Name:        pathParameter,
-						In:          "path",
-						Description: fieldDescription,
-						Required:    true,
-						Schema:      fieldSchema,
-					},
-				},
-			})
+		parameters = append(parameters, HandlerParameterOrReference(pathParameter, inputMessage, g.reflect))
 	}
 
 	return parameters, coveredParameters, path
