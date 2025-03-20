@@ -11,7 +11,7 @@ func trimComment(comment string) string {
 	return strings.TrimSpace(strings.Trim(strings.TrimSpace(comment), "/"))
 }
 
-func handleTitleAndDescription(schema *v3.Schema, comments *protogen.CommentSet) {
+func HandleTitleAndDescription(schema *v3.Schema, comments *protogen.CommentSet) {
 	if schema == nil {
 		return
 	}
