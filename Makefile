@@ -19,7 +19,7 @@ install_gnostic:
 protobuf:
 	protobuild vendor
 	protobuild gen
-	mv github.com/pubgo/protoc-gen-openapi/generator/service.pb.go ./generator
+	mv github.com/pubgo/protoc-gen-openapi/pkg/servicev3 ./pkg/servicev3
 	rm -rf github.com
 
 build:

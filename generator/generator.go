@@ -17,11 +17,12 @@ package generator
 
 import (
 	"fmt"
-	"github.com/pubgo/protoc-gen-openapi/generator/model"
 	"log"
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/pubgo/protoc-gen-openapi/pkg/servicev3"
 
 	v3 "github.com/google/gnostic-models/openapiv3"
 	"google.golang.org/genproto/googleapis/api/annotations"
@@ -160,6 +161,11 @@ func (g *OpenAPIv3Generator) processServiceInfo(d *v3.Document) {
 
 	// If there is only 1 service, then use it's title for the
 	// document, if the document is missing it.
+	g.updateDocumentInfoFromTags(d)
+}
+
+// updateDocumentInfoFromTags updates document information from tags if needed
+func (g *OpenAPIv3Generator) updateDocumentInfoFromTags(d *v3.Document) {
 	if len(d.Tags) == 1 {
 		if d.Info.Title == "" && d.Tags[0].Name != "" {
 			d.Info.Title = d.Tags[0].Name + " API"
@@ -178,67 +184,117 @@ func (g *OpenAPIv3Generator) processServers(d *v3.Document) {
 	// If paths methods has servers, but they're all the same, then move servers to path level
 	for _, path := range d.Paths.Path {
 		var servers []string
-		// Only 1 server will ever be set, per method, by the generator
 
-		if path.Value.Get != nil && len(path.Value.Get.Servers) == 1 {
-			servers = appendUnique(servers, path.Value.Get.Servers[0].Url)
-			allServers = appendUnique(servers, path.Value.Get.Servers[0].Url)
+		// 处理不同HTTP方法的服务器信息
+		servers = g.collectServerURLs(path, servers)
+		allServers = g.appendUniqueServers(allServers, servers)
+
+		// 如果路径下所有方法都具有相同的服务器，则将服务器信息移至路径级别
+		g.moveServersToPathLevel(path, servers)
+	}
+
+	// 如果所有路径都使用相同的服务器，则将服务器信息移至文档级别
+	g.moveServersToDocumentLevel(d, allServers)
+}
+
+// collectServerURLs collects server URLs from different HTTP methods in a path
+func (g *OpenAPIv3Generator) collectServerURLs(path *v3.NamedPathItem, servers []string) []string {
+	// Only 1 server will ever be set, per method, by the generator
+	if path.Value.Get != nil && len(path.Value.Get.Servers) == 1 {
+		servers = appendUnique(servers, path.Value.Get.Servers[0].Url)
+	}
+
+	if path.Value.Post != nil && len(path.Value.Post.Servers) == 1 {
+		servers = appendUnique(servers, path.Value.Post.Servers[0].Url)
+	}
+
+	if path.Value.Put != nil && len(path.Value.Put.Servers) == 1 {
+		servers = appendUnique(servers, path.Value.Put.Servers[0].Url)
+	}
+
+	if path.Value.Delete != nil && len(path.Value.Delete.Servers) == 1 {
+		servers = appendUnique(servers, path.Value.Delete.Servers[0].Url)
+	}
+
+	if path.Value.Patch != nil && len(path.Value.Patch.Servers) == 1 {
+		servers = appendUnique(servers, path.Value.Patch.Servers[0].Url)
+	}
+
+	return servers
+}
+
+// appendUniqueServers appends unique server URLs to allServers list
+func (g *OpenAPIv3Generator) appendUniqueServers(allServers []string, servers []string) []string {
+	for _, server := range servers {
+		allServers = appendUnique(allServers, server)
+	}
+	return allServers
+}
+
+// moveServersToPathLevel moves servers to path level if all methods use the same servers
+func (g *OpenAPIv3Generator) moveServersToPathLevel(path *v3.NamedPathItem, servers []string) {
+	if len(servers) == 1 {
+		allEqual := true
+
+		if path.Value.Get != nil && (len(path.Value.Get.Servers) != 1 || path.Value.Get.Servers[0].Url != servers[0]) {
+			allEqual = false
 		}
 
-		if path.Value.Post != nil && len(path.Value.Post.Servers) == 1 {
-			servers = appendUnique(servers, path.Value.Post.Servers[0].Url)
-			allServers = appendUnique(servers, path.Value.Post.Servers[0].Url)
+		if path.Value.Post != nil && (len(path.Value.Post.Servers) != 1 || path.Value.Post.Servers[0].Url != servers[0]) {
+			allEqual = false
 		}
 
-		if path.Value.Put != nil && len(path.Value.Put.Servers) == 1 {
-			servers = appendUnique(servers, path.Value.Put.Servers[0].Url)
-			allServers = appendUnique(servers, path.Value.Put.Servers[0].Url)
+		if path.Value.Put != nil && (len(path.Value.Put.Servers) != 1 || path.Value.Put.Servers[0].Url != servers[0]) {
+			allEqual = false
 		}
 
-		if path.Value.Delete != nil && len(path.Value.Delete.Servers) == 1 {
-			servers = appendUnique(servers, path.Value.Delete.Servers[0].Url)
-			allServers = appendUnique(servers, path.Value.Delete.Servers[0].Url)
+		if path.Value.Delete != nil && (len(path.Value.Delete.Servers) != 1 || path.Value.Delete.Servers[0].Url != servers[0]) {
+			allEqual = false
 		}
 
-		if path.Value.Patch != nil && len(path.Value.Patch.Servers) == 1 {
-			servers = appendUnique(servers, path.Value.Patch.Servers[0].Url)
-			allServers = appendUnique(servers, path.Value.Patch.Servers[0].Url)
+		if path.Value.Patch != nil && (len(path.Value.Patch.Servers) != 1 || path.Value.Patch.Servers[0].Url != servers[0]) {
+			allEqual = false
 		}
 
-		if len(servers) == 1 {
+		if allEqual {
 			path.Value.Servers = []*v3.Server{{Url: servers[0]}}
 
-			if path.Value.Get != nil {
-				path.Value.Get.Servers = nil
-			}
-			if path.Value.Post != nil {
-				path.Value.Post.Servers = nil
-			}
-			if path.Value.Put != nil {
-				path.Value.Put.Servers = nil
-			}
-			if path.Value.Delete != nil {
-				path.Value.Delete.Servers = nil
-			}
-			if path.Value.Patch != nil {
-				path.Value.Patch.Servers = nil
-			}
+			// 清除各个方法的服务器信息
+			g.clearMethodServers(path)
 		}
 	}
+}
 
-	// Set all servers on API level
-	if len(allServers) > 0 {
-		d.Servers = []*v3.Server{}
-		for _, server := range allServers {
-			d.Servers = append(d.Servers, &v3.Server{Url: server})
-		}
+// clearMethodServers clears server information from each HTTP method in a path
+func (g *OpenAPIv3Generator) clearMethodServers(path *v3.NamedPathItem) {
+	if path.Value.Get != nil {
+		path.Value.Get.Servers = nil
 	}
+	if path.Value.Post != nil {
+		path.Value.Post.Servers = nil
+	}
+	if path.Value.Put != nil {
+		path.Value.Put.Servers = nil
+	}
+	if path.Value.Delete != nil {
+		path.Value.Delete.Servers = nil
+	}
+	if path.Value.Patch != nil {
+		path.Value.Patch.Servers = nil
+	}
+}
 
-	// If there is only 1 server, we can safely remove all path level servers
+// moveServersToDocumentLevel moves servers to document level if all paths use the same servers
+func (g *OpenAPIv3Generator) moveServersToDocumentLevel(d *v3.Document, allServers []string) {
 	if len(allServers) == 1 {
 		for _, path := range d.Paths.Path {
-			path.Value.Servers = nil
+			if len(path.Value.Servers) == 1 && path.Value.Servers[0].Url == allServers[0] {
+				path.Value.Servers = nil
+			} else {
+				return
+			}
 		}
+		d.Servers = []*v3.Server{{Url: allServers[0]}}
 	}
 }
 
@@ -309,154 +365,335 @@ func (g *OpenAPIv3Generator) findAndFormatFieldName(name string, inMessage *prot
 // maps, Struct and Empty can NOT be used
 // messages can have any number of sub messages - including circular (e.g. sub.subsub.sub.subsub.id)
 
-// buildQueryParamsV3 extracts any valid query params, including sub and recursive messages
+// buildQueryParamsV3 builds query parameters for a field
 func (g *OpenAPIv3Generator) buildQueryParamsV3(field *protogen.Field) []*v3.ParameterOrReference {
-	depths := map[string]int{}
+	// 创建一个空的深度映射，用于跟踪递归深度
+	depths := make(map[string]int)
 	return g._buildQueryParamsV3(field, depths)
 }
 
-// depths are used to keep track of how many times a message's fields has been seen
+// _buildQueryParamsV3 is the internal implementation of buildQueryParamsV3
 func (g *OpenAPIv3Generator) _buildQueryParamsV3(field *protogen.Field, depths map[string]int) []*v3.ParameterOrReference {
-	var parameters []*v3.ParameterOrReference
-	queryFieldName := g.reflect.formatFieldName(field.Desc)
-	fieldDescription := g.filterCommentString(field.Comments.Leading)
+	fieldName := string(field.Desc.Name())
+	jsonName := field.Desc.JSONName()
 
-	if field.Desc.IsMap() {
-		// Map types are not allowed in query parameteres
-		return parameters
+	// 获取字段描述和默认值
+	fieldDescription, defaultValue := g.getFieldDescriptionAndDefault(field)
+
+	// 处理不同类型的字段
+	if field.Desc.Kind() == protoreflect.MessageKind && !field.Desc.IsMap() {
+		return g.processMessageField(field, fieldName, jsonName, fieldDescription, defaultValue, depths)
+	} else {
+		// 对于基本类型和Map类型的字段，直接创建参数
+		return []*v3.ParameterOrReference{
+			g.createQueryParameter(jsonName, fieldDescription, defaultValue, g.reflect.schemaOrReferenceForField(field, nil)),
+		}
+	}
+}
+
+// getFieldDescriptionAndDefault extracts field description and default value
+func (g *OpenAPIv3Generator) getFieldDescriptionAndDefault(field *protogen.Field) (string, *v3.Any) {
+	var fieldDescription string
+	var defaultValue *v3.Any
+
+	comment := g.filterCommentString(field.Comments.Leading)
+	commentLines := strings.Split(comment, "\n")
+	fieldDescription = commentLines[0]
+
+	// 检查是否有默认值标记
+	for _, line := range commentLines {
+		if strings.Contains(line, "Default:") {
+			parts := strings.SplitN(line, "Default:", 2)
+			if len(parts) > 1 {
+				defaultValue = &v3.Any{
+					Yaml: strings.TrimSpace(parts[1]),
+				}
+				break
+			}
+		}
 	}
 
-	if field.Desc.Kind() == protoreflect.MessageKind {
-		typeName := fullMessageTypeName(field.Desc.Message())
-		switch typeName {
-		case ".google.protobuf.Value":
-			fieldSchema := g.reflect.schemaOrReferenceForField(field, nil)
-			parameters = append(parameters,
-				&v3.ParameterOrReference{
-					Oneof: &v3.ParameterOrReference_Parameter{
-						Parameter: &v3.Parameter{
-							Name:        queryFieldName,
-							In:          "query",
-							Description: fieldDescription,
-							Required:    false,
-							Schema:      fieldSchema,
-						},
-					},
-				})
-			return parameters
+	return fieldDescription, defaultValue
+}
 
-		case ".google.protobuf.BoolValue", ".google.protobuf.BytesValue", ".google.protobuf.Int32Value", ".google.protobuf.UInt32Value",
-			".google.protobuf.StringValue", ".google.protobuf.Int64Value", ".google.protobuf.UInt64Value", ".google.protobuf.FloatValue",
-			".google.protobuf.DoubleValue":
-			fieldSchema := g.reflect.schemaOrReferenceForField(field, nil)
-			parameters = append(parameters,
-				&v3.ParameterOrReference{
-					Oneof: &v3.ParameterOrReference_Parameter{
-						Parameter: &v3.Parameter{
-							Name:        queryFieldName,
-							In:          "query",
-							Description: fieldDescription,
-							Required:    false,
-							Schema:      fieldSchema,
-						},
-					},
-				})
-			return parameters
+// processMessageField processes a message field for query parameters
+func (g *OpenAPIv3Generator) processMessageField(
+	field *protogen.Field,
+	fieldName string,
+	jsonName string,
+	fieldDescription string,
+	defaultValue *v3.Any,
+	depths map[string]int,
+) []*v3.ParameterOrReference {
+	// 检查递归深度
+	typeName := string(field.Message.Desc.FullName())
+	currentDepth, ok := depths[typeName]
+	if !ok {
+		currentDepth = 0
+	}
 
-		case ".google.protobuf.Timestamp":
-			fieldSchema := g.reflect.schemaOrReferenceForMessage(field.Message.Desc)
-			parameters = append(parameters,
-				&v3.ParameterOrReference{
-					Oneof: &v3.ParameterOrReference_Parameter{
-						Parameter: &v3.Parameter{
-							Name:        queryFieldName,
-							In:          "query",
-							Description: fieldDescription,
-							Required:    false,
-							Schema:      fieldSchema,
-						},
-					},
-				})
-			return parameters
-		case ".google.protobuf.Duration":
-			fieldSchema := g.reflect.schemaOrReferenceForMessage(field.Message.Desc)
-			parameters = append(parameters,
-				&v3.ParameterOrReference{
-					Oneof: &v3.ParameterOrReference_Parameter{
-						Parameter: &v3.Parameter{
-							Name:        queryFieldName,
-							In:          "query",
-							Description: fieldDescription,
-							Required:    false,
-							Schema:      fieldSchema,
-						},
-					},
-				})
-			return parameters
+	// 如果达到最大递归深度，则停止
+	if currentDepth >= *g.conf.CircularDepth {
+		return []*v3.ParameterOrReference{}
+	}
+
+	// 递增深度计数
+	depths[typeName] = currentDepth + 1
+
+	// 对于特殊的类型，给予特殊处理
+	if typeName == "google.protobuf.Timestamp" ||
+		typeName == "google.type.Date" ||
+		typeName == "google.type.DateTime" {
+		return []*v3.ParameterOrReference{
+			g.createQueryParameter(jsonName, fieldDescription, defaultValue, g.reflect.schemaOrReferenceForField(field, nil)),
 		}
+	}
 
-		if field.Desc.IsList() {
-			// Only non-repeated message types are valid
-			return parameters
-		}
+	// 处理嵌套消息类型
+	var result []*v3.ParameterOrReference
 
-		// Represent field masks directly as strings (don't expand them).
-		if typeName == ".google.protobuf.FieldMask" {
-			fieldSchema := g.reflect.schemaOrReferenceForField(field, nil)
-			parameters = append(parameters,
-				&v3.ParameterOrReference{
-					Oneof: &v3.ParameterOrReference_Parameter{
-						Parameter: &v3.Parameter{
-							Name:        queryFieldName,
-							In:          "query",
-							Description: fieldDescription,
-							Required:    false,
-							Schema:      fieldSchema,
-						},
-					},
-				})
-			return parameters
-		}
+	// 遍历嵌套消息的所有字段
+	for _, subField := range field.Message.Fields {
+		subJsonName := subField.Desc.JSONName()
+		paramName := jsonName + "." + subJsonName
 
-		// Sub messages are allowed, even circular, as long as the final type is a primitive.
-		// Go through each of the sub message fields
-		for _, subField := range field.Message.Fields {
-			subFieldFullName := string(subField.Desc.FullName())
-			seen, ok := depths[subFieldFullName]
-			if !ok {
-				depths[subFieldFullName] = 0
-			}
-
-			if seen < *g.conf.CircularDepth {
-				depths[subFieldFullName]++
-				subParams := g._buildQueryParamsV3(subField, depths)
-				for _, subParam := range subParams {
-					if param, ok := subParam.Oneof.(*v3.ParameterOrReference_Parameter); ok {
-						param.Parameter.Name = queryFieldName + "." + param.Parameter.Name
-						parameters = append(parameters, subParam)
-					}
+		// 递归处理每个字段
+		if subField.Desc.Kind() == protoreflect.MessageKind && !subField.Desc.IsMap() {
+			// 对于嵌套消息，递归调用处理函数
+			for _, p := range g._buildQueryParamsV3(subField, depths) {
+				if param := g.getParameterFromReference(p); param != nil {
+					param.Name = jsonName + "." + param.Name
+					result = append(result, p)
 				}
 			}
-		}
-	} else if field.Desc.Kind() != protoreflect.GroupKind {
-		// schemaOrReferenceForField also handles array types
-		fieldSchema := g.reflect.schemaOrReferenceForField(field, nil)
+		} else {
+			// 对于基本类型，创建参数
+			subFieldDescription, _ := g.getFieldDescriptionAndDefault(subField)
+			description := fieldDescription
+			if subFieldDescription != "" {
+				description = subFieldDescription
+			}
 
-		parameters = append(parameters,
-			&v3.ParameterOrReference{
-				Oneof: &v3.ParameterOrReference_Parameter{
-					Parameter: &v3.Parameter{
-						Name:        queryFieldName,
-						In:          "query",
-						Description: fieldDescription,
-						Required:    false,
-						Schema:      fieldSchema,
-					},
-				},
-			})
+			result = append(result, g.createQueryParameter(
+				paramName,
+				description,
+				nil, // 不设置默认值
+				g.reflect.schemaOrReferenceForField(subField, nil),
+			))
+		}
 	}
 
+	// 减少深度计数
+	depths[typeName] = currentDepth
+
+	return result
+}
+
+// getParameterFromReference extracts parameter from parameter reference
+func (g *OpenAPIv3Generator) getParameterFromReference(p *v3.ParameterOrReference) *v3.Parameter {
+	if p.Oneof == nil {
+		return nil
+	}
+
+	if param, ok := p.Oneof.(*v3.ParameterOrReference_Parameter); ok {
+		return param.Parameter
+	}
+
+	return nil
+}
+
+// createQueryParameter creates a query parameter
+func (g *OpenAPIv3Generator) createQueryParameter(
+	name string,
+	description string,
+	defaultValue *v3.Any,
+	schema *v3.SchemaOrReference,
+) *v3.ParameterOrReference {
+	parameter := &v3.Parameter{
+		Name:        name,
+		In:          "query",
+		Description: description,
+		Required:    false,
+		Schema:      schema,
+	}
+
+	// 如果有默认值，添加到扩展属性中
+	if defaultValue != nil {
+		parameter.SpecificationExtension = append(parameter.SpecificationExtension, &v3.NamedAny{
+			Name:  "x-default",
+			Value: defaultValue,
+		})
+	}
+
+	return &v3.ParameterOrReference{
+		Oneof: &v3.ParameterOrReference_Parameter{
+			Parameter: parameter,
+		},
+	}
+}
+
+// buildOperation builds an operation
+func (g *OpenAPIv3Generator) buildOperation(
+	d *v3.Document,
+	operationID string,
+	tagName string,
+	description string,
+	defaultHost string,
+	path string,
+	bodyField string,
+	inputMessage *protogen.Message,
+	outputMessage *protogen.Message,
+) (*v3.Operation, string) {
+	// 构建路径参数
+	parameters, coveredParameters, newPath := g.buildPathParameters(path, inputMessage)
+
+	// 添加请求体参数到已覆盖列表
+	if bodyField != "" {
+		coveredParameters = append(coveredParameters, bodyField)
+	}
+
+	// 添加查询参数
+	parameters = g.addQueryParameters(parameters, coveredParameters, bodyField, inputMessage)
+
+	// 创建操作对象
+	op := &v3.Operation{
+		Tags:        []string{tagName},
+		Description: description,
+		OperationId: operationID,
+		Parameters:  parameters,
+		Responses:   g.buildResponses(outputMessage, *g.conf.DefaultResponse, d),
+		Servers:     g.buildServer(defaultHost),
+		RequestBody: g.buildRequestBody(bodyField, inputMessage),
+	}
+
+	return op, newPath
+}
+
+// addQueryParameters adds query parameters to the parameter list
+func (g *OpenAPIv3Generator) addQueryParameters(
+	parameters []*v3.ParameterOrReference,
+	coveredParameters []string,
+	bodyField string,
+	inputMessage *protogen.Message,
+) []*v3.ParameterOrReference {
+	if bodyField != "*" && string(inputMessage.Desc.FullName()) != "google.api.HttpBody" {
+		for _, field := range inputMessage.Fields {
+			fieldName := string(field.Desc.Name())
+			if !contains(coveredParameters, fieldName) && fieldName != bodyField {
+				fieldParams := g.buildQueryParamsV3(field)
+				parameters = append(parameters, fieldParams...)
+			}
+		}
+	}
 	return parameters
+}
+
+// buildPathParameters builds path parameters
+func (g *OpenAPIv3Generator) buildPathParameters(path string, inputMessage *protogen.Message) ([]*v3.ParameterOrReference, []string, string) {
+	var parameters []*v3.ParameterOrReference
+	coveredParameters := make([]string, 0)
+
+	// 处理简单路径参数 {id}
+	parameters, coveredParameters, path = g.processSimplePathParameters(path, parameters, coveredParameters, inputMessage)
+
+	// 处理命名路径参数 {name=shelves/*}
+	parameters, coveredParameters, path = g.processNamedPathParameters(path, parameters, coveredParameters, inputMessage)
+
+	return parameters, coveredParameters, path
+}
+
+// processSimplePathParameters processes simple path parameters like {id}
+func (g *OpenAPIv3Generator) processSimplePathParameters(
+	path string,
+	parameters []*v3.ParameterOrReference,
+	coveredParameters []string,
+	inputMessage *protogen.Message,
+) ([]*v3.ParameterOrReference, []string, string) {
+	if allMatches := g.pathPattern.FindAllStringSubmatch(path, -1); allMatches != nil {
+		for _, matches := range allMatches {
+			coveredParameters = append(coveredParameters, matches[1])
+			pathParameter := g.findAndFormatFieldName(matches[1], inputMessage)
+			path = strings.Replace(path, matches[1], pathParameter, 1)
+
+			var fieldSchema *v3.SchemaOrReference
+			var fieldDescription string
+			field := g.findField(pathParameter, inputMessage)
+			if field != nil {
+				fieldSchema = g.reflect.schemaOrReferenceForField(field, nil)
+				fieldDescription = g.filterCommentString(field.Comments.Leading)
+			} else {
+				fieldSchema = &v3.SchemaOrReference{
+					Oneof: &v3.SchemaOrReference_Schema{
+						Schema: &v3.Schema{
+							Type: "string",
+						},
+					},
+				}
+			}
+
+			parameters = append(parameters,
+				&v3.ParameterOrReference{
+					Oneof: &v3.ParameterOrReference_Parameter{
+						Parameter: &v3.Parameter{
+							Name:        pathParameter,
+							In:          "path",
+							Description: fieldDescription,
+							Required:    true,
+							Schema:      fieldSchema,
+						},
+					},
+				})
+		}
+	}
+	return parameters, coveredParameters, path
+}
+
+// processNamedPathParameters processes named path parameters like {name=shelves/*}
+func (g *OpenAPIv3Generator) processNamedPathParameters(
+	path string,
+	parameters []*v3.ParameterOrReference,
+	coveredParameters []string,
+	inputMessage *protogen.Message,
+) ([]*v3.ParameterOrReference, []string, string) {
+	if matches := g.namedPathPattern.FindStringSubmatch(path); matches != nil {
+		namedPathParameters := make([]string, 0)
+		coveredParameters = append(coveredParameters, matches[1])
+
+		starredPath := matches[2]
+		parts := strings.Split(starredPath, "/")
+		for i := 0; i < len(parts)-1; i += 2 {
+			section := parts[i]
+			namedPathParameter := g.findAndFormatFieldName(section, inputMessage)
+			namedPathParameter = singular(namedPathParameter)
+			parts[i+1] = "{" + namedPathParameter + "}"
+			namedPathParameters = append(namedPathParameters, namedPathParameter)
+		}
+
+		newPath := strings.Join(parts, "/")
+		path = strings.Replace(path, matches[0], newPath, 1)
+
+		for _, namedPathParameter := range namedPathParameters {
+			parameters = append(parameters,
+				&v3.ParameterOrReference{
+					Oneof: &v3.ParameterOrReference_Parameter{
+						Parameter: &v3.Parameter{
+							Name:        namedPathParameter,
+							In:          "path",
+							Required:    true,
+							Description: "The " + namedPathParameter + " id.",
+							Schema: &v3.SchemaOrReference{
+								Oneof: &v3.SchemaOrReference_Schema{
+									Schema: &v3.Schema{
+										Type: "string",
+									},
+								},
+							},
+						},
+					},
+				})
+		}
+	}
+	return parameters, coveredParameters, path
 }
 
 // buildOperationV3 constructs an operation for a set of values.
@@ -503,136 +740,230 @@ func (g *OpenAPIv3Generator) addOperationToDocumentV3(d *v3.Document, op *v3.Ope
 	}
 }
 
-// addPathsToDocumentV3 adds paths from a specified file descriptor.
+// addPathsToDocumentV3 adds paths to document from services
 func (g *OpenAPIv3Generator) addPathsToDocumentV3(d *v3.Document, services []*protogen.Service) {
 	for _, service := range services {
-		extService, _ := proto.GetExtension(service.Desc.Options(), model.E_Service).(*model.Service)
-
+		serviceExtension := g.extractServiceExtension(service)
 		annotationsCount := 0
+
 		for _, method := range service.Methods {
-			comment := g.filterCommentString(method.Comments.Leading)
-			inputMessage := method.Input
-			outputMessage := method.Output
-			operationID := service.GoName + "_" + method.GoName
-
-			rules := make([]*annotations.HttpRule, 0)
-
-			extHTTP := proto.GetExtension(method.Desc.Options(), annotations.E_Http)
-			if extHTTP != nil && extHTTP != annotations.E_Http.InterfaceOf(annotations.E_Http.Zero()) {
-				annotationsCount++
-
-				rule := extHTTP.(*annotations.HttpRule)
-				rules = append(rules, rule)
-				rules = append(rules, rule.AdditionalBindings...)
-			}
-
-			for _, rule := range rules {
-				var path string
-				var methodName string
-				var body string
-
-				body = rule.Body
-				switch pattern := rule.Pattern.(type) {
-				case *annotations.HttpRule_Get:
-					path = pattern.Get
-					methodName = "GET"
-				case *annotations.HttpRule_Post:
-					path = pattern.Post
-					methodName = "POST"
-				case *annotations.HttpRule_Put:
-					path = pattern.Put
-					methodName = "PUT"
-				case *annotations.HttpRule_Delete:
-					path = pattern.Delete
-					methodName = "DELETE"
-				case *annotations.HttpRule_Patch:
-					path = pattern.Patch
-					methodName = "PATCH"
-				case *annotations.HttpRule_Custom:
-					path = "custom-unsupported"
-				default:
-					path = "unknown-unsupported"
-				}
-
-				if methodName == "" {
-					continue
-				}
-
-				defaultHost := proto.GetExtension(service.Desc.Options(), annotations.E_DefaultHost).(string)
-
-				op, path2 := g.buildOperationV3(
-					d, operationID, service.GoName, comment, defaultHost, path, body, inputMessage, outputMessage)
-
-				// Merge any `Service` annotations with the current
-				if extService != nil {
-					op.Parameters = append(op.Parameters, extService.Parameters...)
-					op.SpecificationExtension = append(op.SpecificationExtension, extService.SpecificationExtension...)
-					op.Tags = append(op.Tags, extService.Tags...)
-					op.Servers = append(op.Servers, extService.Servers...)
-					op.Security = append(op.Security, extService.Security...)
-					if extService.ExternalDocs != nil {
-						proto.Merge(op.ExternalDocs, extService.ExternalDocs)
-					}
-				}
-
-				// Merge any `Operation` annotations with the current
-				extOperation := proto.GetExtension(method.Desc.Options(), v3.E_Operation)
-				if extOperation != nil {
-					proto.Merge(op, extOperation.(*v3.Operation))
-				}
-
-				for _, v := range op.Parameters {
-					if v.Oneof == nil {
-						continue
-					}
-
-					switch v1 := v.Oneof.(type) {
-					case *v3.ParameterOrReference_Parameter:
-						p := v1.Parameter
-						if p.In == "header" {
-							if p.Schema == nil {
-								p.Schema = wellknown.NewStringSchema()
-							}
-						}
-					}
-				}
-
-				var tags []string
-				for _, v := range op.Tags {
-					if strings.Contains(v, "=") {
-						tagNames := strings.SplitN(v, "=", 2)
-						op.SpecificationExtension = append(op.SpecificationExtension, &v3.NamedAny{
-							Name: strings.TrimSpace(tagNames[0]),
-							Value: &v3.Any{
-								Yaml: strings.TrimSpace(tagNames[1]),
-							},
-						})
-						continue
-					}
-
-					tags = append(tags, v)
-				}
-
-				var extMap = make(map[string]*v3.NamedAny)
-				for _, v := range op.SpecificationExtension {
-					extMap[v.Name] = v
-				}
-
-				op.SpecificationExtension = op.SpecificationExtension[:0]
-				for _, v := range extMap {
-					op.SpecificationExtension = append(op.SpecificationExtension, v)
-				}
-
-				op.Tags = tags
-				g.addOperationToDocumentV3(d, op, path2, methodName)
-			}
+			annotationsCount += g.processMethodAnnotations(d, service, method, serviceExtension)
 		}
 
 		if annotationsCount > 0 {
-			comment := g.filterCommentString(service.Comments.Leading)
-			d.Tags = append(d.Tags, &v3.Tag{Name: service.GoName, Description: comment})
+			g.addServiceTag(d, service)
 		}
 	}
+}
+
+// extractServiceExtension extracts service extensions from service options
+func (g *OpenAPIv3Generator) extractServiceExtension(service *protogen.Service) *servicev3.Service {
+	serviceExtension, _ := proto.GetExtension(service.Desc.Options(), servicev3.E_Service).(*servicev3.Service)
+	return serviceExtension
+}
+
+// processMethodAnnotations processes all HTTP annotations for a method
+func (g *OpenAPIv3Generator) processMethodAnnotations(d *v3.Document, service *protogen.Service, method *protogen.Method, serviceExtension *servicev3.Service) int {
+	count := 0
+	rules := g.extractHttpRules(method)
+
+	for _, rule := range rules {
+		count += g.processHttpRule(d, service, method, rule, serviceExtension)
+	}
+
+	return count
+}
+
+// extractHttpRules extracts HTTP rules from method options
+func (g *OpenAPIv3Generator) extractHttpRules(method *protogen.Method) []*annotations.HttpRule {
+	rules := make([]*annotations.HttpRule, 0)
+
+	extHTTP := proto.GetExtension(method.Desc.Options(), annotations.E_Http)
+	if extHTTP != nil && extHTTP != annotations.E_Http.InterfaceOf(annotations.E_Http.Zero()) {
+		rule := extHTTP.(*annotations.HttpRule)
+		rules = append(rules, rule)
+		rules = append(rules, rule.AdditionalBindings...)
+	}
+
+	return rules
+}
+
+// processHttpRule processes a single HTTP rule for a method
+func (g *OpenAPIv3Generator) processHttpRule(d *v3.Document, service *protogen.Service, method *protogen.Method, rule *annotations.HttpRule, serviceExtension *servicev3.Service) int {
+	var methodName string
+	var httpRule HTTPRule
+
+	httpRule = g.buildHTTPRule(rule)
+	if httpRule.IsCustom || httpRule.IsUnknown {
+		return 0
+	}
+
+	methodName = httpRule.Method
+	if methodName == "" {
+		return 0
+	}
+
+	op, newPath := g.buildOperationForMethod(d, service, method, rule, httpRule)
+	if op == nil {
+		return 0
+	}
+
+	// 合并服务级别的扩展
+	g.mergeServiceExtensions(op, serviceExtension)
+
+	// 合并方法级别的扩展
+	g.mergeMethodExtensions(op, method)
+
+	// 处理参数
+	g.processOperationParameters(op)
+
+	// 处理标签和规范扩展
+	g.processOperationTags(op)
+
+	// 添加操作到文档
+	g.addOperationToDocumentV3(d, op, newPath, methodName)
+
+	return 1
+}
+
+// buildHTTPRule builds an HTTPRule from an annotations.HttpRule
+func (g *OpenAPIv3Generator) buildHTTPRule(rule *annotations.HttpRule) HTTPRule {
+	result := HTTPRule{
+		Body: rule.Body,
+	}
+
+	switch pattern := rule.Pattern.(type) {
+	case *annotations.HttpRule_Get:
+		result.Path = pattern.Get
+		result.Method = "GET"
+	case *annotations.HttpRule_Post:
+		result.Path = pattern.Post
+		result.Method = "POST"
+	case *annotations.HttpRule_Put:
+		result.Path = pattern.Put
+		result.Method = "PUT"
+	case *annotations.HttpRule_Delete:
+		result.Path = pattern.Delete
+		result.Method = "DELETE"
+	case *annotations.HttpRule_Patch:
+		result.Path = pattern.Patch
+		result.Method = "PATCH"
+	case *annotations.HttpRule_Custom:
+		result.Path = "custom-unsupported"
+		result.IsCustom = true
+	default:
+		result.Path = "unknown-unsupported"
+		result.IsUnknown = true
+	}
+
+	return result
+}
+
+// buildOperationForMethod builds an operation for a method
+func (g *OpenAPIv3Generator) buildOperationForMethod(d *v3.Document, service *protogen.Service, method *protogen.Method, rule *annotations.HttpRule, httpRule HTTPRule) (*v3.Operation, string) {
+	comment := method.Comments.Leading.String()
+	operationID := service.GoName + "_" + method.GoName
+	defaultHost := proto.GetExtension(service.Desc.Options(), annotations.E_DefaultHost).(string)
+
+	return g.buildOperation(
+		d,
+		operationID,
+		service.GoName,
+		comment,
+		defaultHost,
+		httpRule.Path,
+		httpRule.Body,
+		method.Input,
+		method.Output,
+	)
+}
+
+// mergeServiceExtensions merges service extensions into an operation
+func (g *OpenAPIv3Generator) mergeServiceExtensions(op *v3.Operation, serviceExtension *servicev3.Service) {
+	if serviceExtension == nil {
+		return
+	}
+
+	op.Parameters = append(op.Parameters, serviceExtension.Parameters...)
+	op.SpecificationExtension = append(op.SpecificationExtension, serviceExtension.SpecificationExtension...)
+	op.Tags = append(op.Tags, serviceExtension.Tags...)
+	op.Servers = append(op.Servers, serviceExtension.Servers...)
+	op.Security = append(op.Security, serviceExtension.Security...)
+	if serviceExtension.ExternalDocs != nil {
+		proto.Merge(op.ExternalDocs, serviceExtension.ExternalDocs)
+	}
+}
+
+// mergeMethodExtensions merges method extensions into an operation
+func (g *OpenAPIv3Generator) mergeMethodExtensions(op *v3.Operation, method *protogen.Method) {
+	if extOperation := proto.GetExtension(method.Desc.Options(), v3.E_Operation); extOperation != nil {
+		proto.Merge(op, extOperation.(*v3.Operation))
+	}
+}
+
+// processOperationParameters processes operation parameters
+func (g *OpenAPIv3Generator) processOperationParameters(op *v3.Operation) {
+	for _, v := range op.Parameters {
+		if v.Oneof == nil {
+			continue
+		}
+
+		switch v1 := v.Oneof.(type) {
+		case *v3.ParameterOrReference_Parameter:
+			p := v1.Parameter
+			if p.In == "header" && p.Schema == nil {
+				p.Schema = wellknown.NewStringSchema()
+			}
+		}
+	}
+}
+
+// processOperationTags processes operation tags and specification extensions
+func (g *OpenAPIv3Generator) processOperationTags(op *v3.Operation) {
+	var tags []string
+	var extensions []*v3.NamedAny
+
+	for _, v := range op.Tags {
+		if strings.Contains(v, "=") {
+			tagNames := strings.SplitN(v, "=", 2)
+			extensions = append(extensions, &v3.NamedAny{
+				Name: strings.TrimSpace(tagNames[0]),
+				Value: &v3.Any{
+					Yaml: strings.TrimSpace(tagNames[1]),
+				},
+			})
+			continue
+		}
+		tags = append(tags, v)
+	}
+
+	// Map extensions to ensure unique keys
+	extMap := make(map[string]*v3.NamedAny)
+	for _, v := range append(op.SpecificationExtension, extensions...) {
+		extMap[v.Name] = v
+	}
+
+	op.SpecificationExtension = op.SpecificationExtension[:0]
+	for _, v := range extMap {
+		op.SpecificationExtension = append(op.SpecificationExtension, v)
+	}
+
+	op.Tags = tags
+}
+
+// addServiceTag adds a service tag to the document
+func (g *OpenAPIv3Generator) addServiceTag(d *v3.Document, service *protogen.Service) {
+	comment := service.Comments.Leading.String()
+	d.Tags = append(d.Tags, &v3.Tag{Name: service.GoName, Description: comment})
+}
+
+// HTTPRule represents an HTTP rule
+type HTTPRule struct {
+	Path      string
+	Method    string
+	Body      string
+	IsCustom  bool
+	IsUnknown bool
 }
 
 // addSchemaForMessageToDocumentV3 adds the schema to the document if required

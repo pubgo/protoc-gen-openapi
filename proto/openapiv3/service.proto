@@ -6,7 +6,7 @@ import "openapiv3/OpenAPIv3.proto";
 import "google/protobuf/descriptor.proto";
 
 // The Go package name.
-option go_package = "github.com/pubgo/protoc-gen-openapi/generator;generator";
+option go_package = "github.com/pubgo/protoc-gen-openapi/pkg/servicev3;servicev3";
 
 extend google.protobuf.ServiceOptions {
   Service service = 1144;
