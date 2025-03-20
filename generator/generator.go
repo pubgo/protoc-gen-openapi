@@ -326,7 +326,7 @@ func (g *OpenAPIv3Generator) findField(name string, inMessage *protogen.Message)
 func (g *OpenAPIv3Generator) findAndFormatFieldName(name string, inMessage *protogen.Message) string {
 	field := g.findField(name, inMessage)
 	if field != nil {
-		return g.reflect.formatFieldName(field.Desc)
+		return formatFieldName(*g.conf.Naming, field.Desc)
 	}
 
 	return name
@@ -982,7 +982,7 @@ func (g *OpenAPIv3Generator) addSchemasForMessagesToDocumentV3(d *v3.Document, m
 			g.addSchemaToDocumentV3(d, wellknown.NewGoogleProtobufAnySchema(schemaName))
 			continue
 		} else if typeName == ".google.rpc.Status" {
-			anySchemaName := g.reflect.formatMessageName(anyProtoDesc)
+			anySchemaName := formatMessageName(&g.conf, anyProtoDesc)
 			g.addSchemaToDocumentV3(d, wellknown.NewGoogleProtobufAnySchema(anySchemaName))
 			g.addSchemaToDocumentV3(d, wellknown.NewGoogleRpcStatusSchema(schemaName, anySchemaName))
 			continue
@@ -1011,7 +1011,7 @@ func (g *OpenAPIv3Generator) addSchemasForMessagesToDocumentV3(d *v3.Document, m
 						case annotations.FieldBehavior_INPUT_ONLY:
 							inputOnly = true
 						case annotations.FieldBehavior_REQUIRED:
-							required = append(required, g.reflect.formatFieldName(field.Desc))
+							required = append(required, formatFieldName(*g.conf.Naming, field.Desc))
 						}
 					}
 				default:
@@ -1057,7 +1057,7 @@ func (g *OpenAPIv3Generator) addSchemasForMessagesToDocumentV3(d *v3.Document, m
 			definitionProperties.AdditionalProperties = append(
 				definitionProperties.AdditionalProperties,
 				&v3.NamedSchemaOrReference{
-					Name:  g.reflect.formatFieldName(field.Desc),
+					Name:  formatFieldName(*g.conf.Naming, field.Desc),
 					Value: fieldSchema,
 				},
 			)

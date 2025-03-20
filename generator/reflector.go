@@ -122,8 +122,8 @@ func (r *OpenAPIv3Reflector) applyNamingConventions(name string) string {
 //
 // 返回值:
 //   - 格式化后的字段名称
-func (r *OpenAPIv3Reflector) formatFieldName(field protoreflect.FieldDescriptor) string {
-	if *r.conf.Naming == "proto" {
+func formatFieldName(naming string, field protoreflect.FieldDescriptor) string {
+	if naming == "proto" {
 		return string(field.Name())
 	}
 

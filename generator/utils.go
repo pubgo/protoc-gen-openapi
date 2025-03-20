@@ -105,16 +105,6 @@ func toLowerFirstLetter(s string) string {
 	return string(r)
 }
 
-// formatFieldName 格式化字段名称
-// 参数:
-//   - field: 字段描述符
-//
-// 返回值:
-//   - 格式化后的字段名称
-func formatFieldName(field protoreflect.FieldDescriptor) string {
-	return field.JSONName()
-}
-
 // fullMessageTypeName 获取完整的消息类型名称
 // 参数:
 //   - message: 消息描述符
