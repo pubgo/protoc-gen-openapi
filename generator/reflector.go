@@ -16,12 +16,10 @@
 package generator
 
 import (
-	"log"
-	"strings"
-
 	v3 "github.com/google/gnostic-models/openapiv3"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	"log"
 
 	"github.com/pubgo/protoc-gen-openapi/generator/wellknown"
 )
@@ -88,30 +86,11 @@ func formatMessageName(conf *Configuration, message protoreflect.MessageDescript
 //
 // 返回值:
 //   - 处理后的名称
-func (r *OpenAPIv3Reflector) handleBuiltInTypes(typeName, name string) string {
+func handleBuiltInTypes(typeName, name string) string {
 	if typeName == ".google.protobuf.Value" {
 		return protobufValueName
 	} else if typeName == ".google.protobuf.Any" {
 		return protobufAnyName
-	}
-	return name
-}
-
-// applyNamingConventions 应用命名约定
-// 参数:
-//   - name: 原始名称
-//
-// 返回值:
-//   - 应用命名约定后的名称
-func (r *OpenAPIv3Reflector) applyNamingConventions(name string) string {
-	if *r.conf.Naming == "json" {
-		if len(name) > 1 {
-			name = strings.ToUpper(name[0:1]) + name[1:]
-		}
-
-		if len(name) == 1 {
-			name = strings.ToLower(name)
-		}
 	}
 	return name
 }
@@ -179,12 +158,12 @@ func (r *OpenAPIv3Reflector) isHttpBodyMessage(typeName string) bool {
 //
 // 返回值:
 //   - 模式引用
-func (r *OpenAPIv3Reflector) schemaReferenceForMessage(message protoreflect.MessageDescriptor) string {
-	schemaName := formatMessageName(&r.conf, message)
-	if !contains(r.requiredSchemas, schemaName) {
-		r.requiredSchemas = append(r.requiredSchemas, schemaName)
+func schemaReferenceForMessage(cfg *Configuration, requiredSchemas []string, message protoreflect.MessageDescriptor) ([]string, string) {
+	schemaName := formatMessageName(cfg, message)
+	if !contains(requiredSchemas, schemaName) {
+		requiredSchemas = append(requiredSchemas, schemaName)
 	}
-	return "#/components/schemas/" + schemaName
+	return requiredSchemas, "#/components/schemas/" + schemaName
 }
 
 // schemaOrReferenceForMessage 获取消息的模式或引用
@@ -203,7 +182,8 @@ func (r *OpenAPIv3Reflector) schemaOrReferenceForMessage(message protoreflect.Me
 	}
 
 	// 处理普通类型
-	ref := r.schemaReferenceForMessage(message)
+	requiredSchemas, ref := schemaReferenceForMessage(&r.conf, r.requiredSchemas, message)
+	r.requiredSchemas = requiredSchemas
 	return &v3.SchemaOrReference{
 		Oneof: &v3.SchemaOrReference_Reference{Reference: &v3.Reference{XRef: ref}},
 	}

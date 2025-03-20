@@ -44,8 +44,11 @@ const (
 // to know the message descriptors for google.rpc.Status as well
 // as google.protobuf.Any.
 var (
-	statusProtoDesc = (&statuspb.Status{}).ProtoReflect().Descriptor()
-	anyProtoDesc    = (&anypb.Any{}).ProtoReflect().Descriptor()
+	statusProtoDesc   = (&statuspb.Status{}).ProtoReflect().Descriptor()
+	anyProtoDesc      = (&anypb.Any{}).ProtoReflect().Descriptor()
+	linterRulePattern = regexp.MustCompile(`\(-- .* --\)`)
+	namedPathPattern  = regexp.MustCompile("{(.+)=(.+)}")
+	pathPattern       = regexp.MustCompile("{([^=}]+)}")
 )
 
 // OpenAPIv3Generator holds internal state needed to generate an OpenAPIv3 document for a transcoded Protocol Buffer service.
@@ -53,12 +56,9 @@ type OpenAPIv3Generator struct {
 	conf   Configuration
 	plugin *protogen.Plugin
 
-	inputFiles        []*protogen.File
-	reflect           *OpenAPIv3Reflector
-	generatedSchemas  []string // Names of schemas that have already been generated.
-	linterRulePattern *regexp.Regexp
-	pathPattern       *regexp.Regexp
-	namedPathPattern  *regexp.Regexp
+	inputFiles       []*protogen.File
+	reflect          *OpenAPIv3Reflector
+	generatedSchemas []string // Names of schemas that have already been generated.
 }
 
 // NewOpenAPIv3Generator creates a new generator for a protoc plugin invocation.
@@ -67,12 +67,9 @@ func NewOpenAPIv3Generator(plugin *protogen.Plugin, conf Configuration, inputFil
 		conf:   conf,
 		plugin: plugin,
 
-		inputFiles:        inputFiles,
-		reflect:           NewOpenAPIv3Reflector(conf),
-		generatedSchemas:  make([]string, 0),
-		linterRulePattern: regexp.MustCompile(`\(-- .* --\)`),
-		pathPattern:       regexp.MustCompile("{([^=}]+)}"),
-		namedPathPattern:  regexp.MustCompile("{(.+)=(.+)}"),
+		inputFiles:       inputFiles,
+		reflect:          NewOpenAPIv3Reflector(conf),
+		generatedSchemas: make([]string, 0),
 	}
 }
 
@@ -308,12 +305,12 @@ func (g *OpenAPIv3Generator) sortDocument(d *v3.Document) {
 }
 
 // filterCommentString removes linter rules from comments.
-func (g *OpenAPIv3Generator) filterCommentString(c protogen.Comments) string {
-	comment := g.linterRulePattern.ReplaceAllString(string(c), "")
+func filterCommentString(c protogen.Comments) string {
+	comment := linterRulePattern.ReplaceAllString(string(c), "")
 	return strings.TrimSpace(comment)
 }
 
-func (g *OpenAPIv3Generator) findField(name string, inMessage *protogen.Message) *protogen.Field {
+func findField(name string, inMessage *protogen.Message) *protogen.Field {
 	for _, field := range inMessage.Fields {
 		if string(field.Desc.Name()) == name || string(field.Desc.JSONName()) == name {
 			return field
@@ -324,7 +321,7 @@ func (g *OpenAPIv3Generator) findField(name string, inMessage *protogen.Message)
 }
 
 func (g *OpenAPIv3Generator) findAndFormatFieldName(name string, inMessage *protogen.Message) string {
-	field := g.findField(name, inMessage)
+	field := findField(name, inMessage)
 	if field != nil {
 		return formatFieldName(*g.conf.Naming, field.Desc)
 	}
@@ -375,7 +372,7 @@ func (g *OpenAPIv3Generator) getFieldDescriptionAndDefault(field *protogen.Field
 	var fieldDescription string
 	var defaultValue *v3.Any
 
-	comment := g.filterCommentString(field.Comments.Leading)
+	comment := filterCommentString(field.Comments.Leading)
 	commentLines := strings.Split(comment, "\n")
 	fieldDescription = commentLines[0]
 
@@ -588,7 +585,7 @@ func (g *OpenAPIv3Generator) processSimplePathParameters(
 	coveredParameters []string,
 	inputMessage *protogen.Message,
 ) ([]*v3.ParameterOrReference, []string, string) {
-	if allMatches := g.pathPattern.FindAllStringSubmatch(path, -1); allMatches != nil {
+	if allMatches := pathPattern.FindAllStringSubmatch(path, -1); allMatches != nil {
 		for _, matches := range allMatches {
 			coveredParameters = append(coveredParameters, matches[1])
 			pathParameter := g.findAndFormatFieldName(matches[1], inputMessage)
@@ -596,10 +593,10 @@ func (g *OpenAPIv3Generator) processSimplePathParameters(
 
 			var fieldSchema *v3.SchemaOrReference
 			var fieldDescription string
-			field := g.findField(pathParameter, inputMessage)
+			field := findField(pathParameter, inputMessage)
 			if field != nil {
 				fieldSchema = g.reflect.schemaOrReferenceForField(field, nil)
-				fieldDescription = g.filterCommentString(field.Comments.Leading)
+				fieldDescription = filterCommentString(field.Comments.Leading)
 			} else {
 				fieldSchema = &v3.SchemaOrReference{
 					Oneof: &v3.SchemaOrReference_Schema{
@@ -634,7 +631,7 @@ func (g *OpenAPIv3Generator) processNamedPathParameters(
 	coveredParameters []string,
 	inputMessage *protogen.Message,
 ) ([]*v3.ParameterOrReference, []string, string) {
-	if matches := g.namedPathPattern.FindStringSubmatch(path); matches != nil {
+	if matches := namedPathPattern.FindStringSubmatch(path); matches != nil {
 		namedPathParameters := make([]string, 0)
 		coveredParameters = append(coveredParameters, matches[1])
 
@@ -691,7 +688,7 @@ func (g *OpenAPIv3Generator) buildOperationV3(
 }
 
 // addOperationToDocumentV3 adds an operation to the specified path/method.
-func (g *OpenAPIv3Generator) addOperationToDocumentV3(d *v3.Document, op *v3.Operation, path, methodName string) {
+func addOperationToDocumentV3(d *v3.Document, op *v3.Operation, path, methodName string) {
 	var selectedPathItem *v3.NamedPathItem
 	for _, namedPathItem := range d.Paths.Path {
 		if namedPathItem.Name == path {
@@ -744,7 +741,7 @@ func extractServiceExtension(service *protogen.Service) *servicev3.Service {
 // processMethodAnnotations processes all HTTP annotations for a method
 func (g *OpenAPIv3Generator) processMethodAnnotations(d *v3.Document, service *protogen.Service, method *protogen.Method, serviceExtension *servicev3.Service) int {
 	count := 0
-	rules := g.extractHttpRules(method)
+	rules := extractHttpRules(method)
 
 	for _, rule := range rules {
 		count += g.processHttpRule(d, service, method, rule, serviceExtension)
@@ -754,7 +751,7 @@ func (g *OpenAPIv3Generator) processMethodAnnotations(d *v3.Document, service *p
 }
 
 // extractHttpRules extracts HTTP rules from method options
-func (g *OpenAPIv3Generator) extractHttpRules(method *protogen.Method) []*annotations.HttpRule {
+func extractHttpRules(method *protogen.Method) []*annotations.HttpRule {
 	rules := make([]*annotations.HttpRule, 0)
 
 	extHTTP := proto.GetExtension(method.Desc.Options(), annotations.E_Http)
@@ -772,7 +769,7 @@ func (g *OpenAPIv3Generator) processHttpRule(d *v3.Document, service *protogen.S
 	var methodName string
 	var httpRule HTTPRule
 
-	httpRule = g.buildHTTPRule(rule)
+	httpRule = buildHTTPRule(rule)
 	if httpRule.IsCustom || httpRule.IsUnknown {
 		return 0
 	}
@@ -788,25 +785,25 @@ func (g *OpenAPIv3Generator) processHttpRule(d *v3.Document, service *protogen.S
 	}
 
 	// 合并服务级别的扩展
-	g.mergeServiceExtensions(op, serviceExtension)
+	mergeServiceExtensions(op, serviceExtension)
 
 	// 合并方法级别的扩展
-	g.mergeMethodExtensions(op, method)
+	mergeMethodExtensions(op, method)
 
 	// 处理参数
-	g.processOperationParameters(op)
+	processOperationParameters(op)
 
 	// 处理标签和规范扩展
-	g.processOperationTags(op)
+	processOperationTags(op)
 
 	// 添加操作到文档
-	g.addOperationToDocumentV3(d, op, newPath, methodName)
+	addOperationToDocumentV3(d, op, newPath, methodName)
 
 	return 1
 }
 
 // buildHTTPRule builds an HTTPRule from an annotations.HttpRule
-func (g *OpenAPIv3Generator) buildHTTPRule(rule *annotations.HttpRule) HTTPRule {
+func buildHTTPRule(rule *annotations.HttpRule) HTTPRule {
 	result := HTTPRule{
 		Body: rule.Body,
 	}
@@ -858,7 +855,7 @@ func (g *OpenAPIv3Generator) buildOperationForMethod(d *v3.Document, service *pr
 }
 
 // mergeServiceExtensions merges service extensions into an operation
-func (g *OpenAPIv3Generator) mergeServiceExtensions(op *v3.Operation, serviceExtension *servicev3.Service) {
+func mergeServiceExtensions(op *v3.Operation, serviceExtension *servicev3.Service) {
 	if serviceExtension == nil {
 		return
 	}
@@ -874,14 +871,14 @@ func (g *OpenAPIv3Generator) mergeServiceExtensions(op *v3.Operation, serviceExt
 }
 
 // mergeMethodExtensions merges method extensions into an operation
-func (g *OpenAPIv3Generator) mergeMethodExtensions(op *v3.Operation, method *protogen.Method) {
+func mergeMethodExtensions(op *v3.Operation, method *protogen.Method) {
 	if extOperation := proto.GetExtension(method.Desc.Options(), v3.E_Operation); extOperation != nil {
 		proto.Merge(op, extOperation.(*v3.Operation))
 	}
 }
 
 // processOperationParameters processes operation parameters
-func (g *OpenAPIv3Generator) processOperationParameters(op *v3.Operation) {
+func processOperationParameters(op *v3.Operation) {
 	for _, v := range op.Parameters {
 		if v.Oneof == nil {
 			continue
@@ -898,7 +895,7 @@ func (g *OpenAPIv3Generator) processOperationParameters(op *v3.Operation) {
 }
 
 // processOperationTags processes operation tags and specification extensions
-func (g *OpenAPIv3Generator) processOperationTags(op *v3.Operation) {
+func processOperationTags(op *v3.Operation) {
 	var tags []string
 	var extensions []*v3.NamedAny
 
@@ -971,7 +968,7 @@ func (g *OpenAPIv3Generator) addSchemasForMessagesToDocumentV3(d *v3.Document, m
 		}
 
 		typeName := fullMessageTypeName(message.Desc)
-		messageDescription := g.filterCommentString(message.Comments.Leading)
+		messageDescription := filterCommentString(message.Comments.Leading)
 
 		// `google.protobuf.Value` and `google.protobuf.Any` have special JSON transcoding
 		// so we can't just reflect on the message descriptor.
@@ -996,7 +993,7 @@ func (g *OpenAPIv3Generator) addSchemasForMessagesToDocumentV3(d *v3.Document, m
 		var required []string
 		for _, field := range message.Fields {
 			// Get the field description from the comments.
-			description := g.filterCommentString(field.Comments.Leading)
+			description := filterCommentString(field.Comments.Leading)
 			// Check the field annotations to see if this is a readonly or writeonly field.
 			inputOnly := false
 			outputOnly := false

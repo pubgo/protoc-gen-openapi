@@ -158,137 +158,6 @@ func getValueField(message protoreflect.MessageDescriptor) protoreflect.FieldDes
 	return nil
 }
 
-// schemaReferenceForMessage 获取消息的 Schema 引用
-// 参数:
-//   - message: 消息描述符
-//
-// 返回值:
-//   - 消息的 Schema 引用
-func schemaReferenceForMessage(message protoreflect.MessageDescriptor) string {
-	schemaName := formatMessageName(message)
-	return "#/components/schemas/" + schemaName
-}
-
-// filterCommentString 过滤注释字符串
-// 参数:
-//   - comment: 注释文本
-//
-// 返回值:
-//   - 过滤后的注释文本
-func filterCommentString(comment protogen.Comments) string {
-	return string(comment)
-}
-
-// splitLines 将字符串按行分割成切片
-// 参数:
-//   - s: 要分割的字符串
-//
-// 返回值:
-//   - 分割后的行切片
-func splitLines(s string) []string {
-	return strings.Split(s, "\n")
-}
-
-// joinLines 将字符串切片合并成一个字符串
-// 参数:
-//   - lines: 行切片
-//   - separator: 分隔符
-//
-// 返回值:
-//   - 合并后的字符串
-func joinLines(lines []string, separator string) string {
-	return strings.Join(lines, separator)
-}
-
-// trimSpace 去除字符串前后的空白字符
-// 参数:
-//   - s: 要处理的字符串
-//
-// 返回值:
-//   - 处理后的字符串
-func trimSpace(s string) string {
-	return strings.TrimSpace(s)
-}
-
-// hasPrefix 检查字符串是否以指定前缀开头
-// 参数:
-//   - s: 要检查的字符串
-//   - prefix: 前缀
-//
-// 返回值:
-//   - 如果s以prefix开头则返回true，否则返回false
-func hasPrefix(s, prefix string) bool {
-	return strings.HasPrefix(s, prefix)
-}
-
-// hasSuffix 检查字符串是否以指定后缀结尾
-// 参数:
-//   - s: 要检查的字符串
-//   - suffix: 后缀
-//
-// 返回值:
-//   - 如果s以suffix结尾则返回true，否则返回false
-func hasSuffix(s, suffix string) bool {
-	return strings.HasSuffix(s, suffix)
-}
-
-// trimPrefix 去除字符串的前缀
-// 参数:
-//   - s: 要处理的字符串
-//   - prefix: 要去除的前缀
-//
-// 返回值:
-//   - 处理后的字符串
-func trimPrefix(s, prefix string) string {
-	return strings.TrimPrefix(s, prefix)
-}
-
-// trimSuffix 去除字符串的后缀
-// 参数:
-//   - s: 要处理的字符串
-//   - suffix: 要去除的后缀
-//
-// 返回值:
-//   - 处理后的字符串
-func trimSuffix(s, suffix string) string {
-	return strings.TrimSuffix(s, suffix)
-}
-
-// findInSlice 在切片中查找元素
-// 参数:
-//   - slice: 要搜索的切片
-//   - predicate: 用于确定元素是否匹配的函数
-//
-// 返回值:
-//   - 第一个匹配元素的索引，如果没有找到则返回-1
-//   - 找到的元素
-//   - 是否找到
-func findInSlice[T any](slice []T, predicate func(T) bool) (int, T, bool) {
-	for i, item := range slice {
-		if predicate(item) {
-			return i, item, true
-		}
-	}
-	var zero T
-	return -1, zero, false
-}
-
-// handleBuiltInTypes 处理内置类型的命名
-// 参数:
-//   - typeName: 类型全名
-//   - name: 原始名称
-//
-// 返回值:
-//   - 处理后的名称
-func handleBuiltInTypes(typeName, name string) string {
-	if typeName == ".google.protobuf.Value" {
-		return protobufValueName
-	} else if typeName == ".google.protobuf.Any" {
-		return protobufAnyName
-	}
-	return name
-}
-
 // applyNamingConventions 应用命名约定
 // 参数:
 //   - name: 原始名称
@@ -404,7 +273,13 @@ func handleFieldByKind(
 ) *v3.SchemaOrReference {
 	switch kind {
 	case protoreflect.MessageKind:
-		return handleMessageField(field, desc, schemaOrReferenceForField, schemaOrReferenceForMessage)
+		if desc.IsMap() {
+			// 处理映射类型
+			return wellknown.NewGoogleProtobufMapFieldEntrySchema(schemaOrReferenceForField(field, desc.MapValue()))
+		} else {
+			// 处理普通消息类型
+			return schemaOrReferenceForMessage(desc.Message())
+		}
 	case protoreflect.StringKind:
 		return wellknown.NewStringSchema()
 	case protoreflect.Int32Kind, protoreflect.Sint32Kind, protoreflect.Uint32Kind,
@@ -436,20 +311,6 @@ func handleFieldByKind(
 //
 // 返回值:
 //   - 模式或引用
-func handleMessageField(
-	field *protogen.Field,
-	desc protoreflect.FieldDescriptor,
-	schemaOrReferenceForField func(*protogen.Field, protoreflect.FieldDescriptor) *v3.SchemaOrReference,
-	schemaOrReferenceForMessage func(protoreflect.MessageDescriptor) *v3.SchemaOrReference,
-) *v3.SchemaOrReference {
-	if desc.IsMap() {
-		// 处理映射类型
-		return wellknown.NewGoogleProtobufMapFieldEntrySchema(schemaOrReferenceForField(field, desc.MapValue()))
-	} else {
-		// 处理普通消息类型
-		return schemaOrReferenceForMessage(desc.Message())
-	}
-}
 
 // initializeDocument 初始化 OpenAPI 文档
 // 参数:
