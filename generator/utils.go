@@ -16,9 +16,12 @@
 package generator
 
 import (
+	"log"
 	"strings"
 	"unicode"
 
+	v3 "github.com/google/gnostic-models/openapiv3"
+	"github.com/pubgo/protoc-gen-openapi/generator/wellknown"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -70,34 +73,6 @@ func singular(plural string) string {
 		return strings.TrimSuffix(plural, "s")
 	}
 	return plural
-}
-
-// formatMessageName 格式化消息名称
-// 参数:
-//   - message: 消息描述符
-//
-// 返回值:
-//   - 格式化后的消息名称
-func formatMessageName(message protoreflect.MessageDescriptor) string {
-	typeName := fullMessageTypeName(message)
-	name := getMessageName(message)
-	if typeName == ".google.protobuf.Value" {
-		name = protobufValueName
-	} else if typeName == ".google.protobuf.Any" {
-		name = protobufAnyName
-	}
-
-	// 首字母大写，其余保持不变
-	if len(name) > 1 {
-		name = toUpperFirstLetter(name)
-	}
-
-	// 对于单个字母的名称，全部小写
-	if len(name) == 1 {
-		name = strings.ToLower(name)
-	}
-
-	return name
 }
 
 // toUpperFirstLetter 将字符串的第一个字母转换为大写
@@ -306,4 +281,207 @@ func findInSlice[T any](slice []T, predicate func(T) bool) (int, T, bool) {
 	}
 	var zero T
 	return -1, zero, false
+}
+
+// handleBuiltInTypes 处理内置类型的命名
+// 参数:
+//   - typeName: 类型全名
+//   - name: 原始名称
+//
+// 返回值:
+//   - 处理后的名称
+func handleBuiltInTypes(typeName, name string) string {
+	if typeName == ".google.protobuf.Value" {
+		return protobufValueName
+	} else if typeName == ".google.protobuf.Any" {
+		return protobufAnyName
+	}
+	return name
+}
+
+// applyNamingConventions 应用命名约定
+// 参数:
+//   - name: 原始名称
+//   - naming: 命名约定类型 ("proto" 或 "json")
+//
+// 返回值:
+//   - 应用命名约定后的名称
+func applyNamingConventions(name, naming string) string {
+	if naming == "json" {
+		if len(name) > 1 {
+			name = toUpperFirstLetter(name)
+		}
+
+		if len(name) == 1 {
+			name = strings.ToLower(name)
+		}
+	}
+	return name
+}
+
+// isEmptyMessage 检查消息是否为 Empty 类型
+// 参数:
+//   - typeName: 类型全名
+//
+// 返回值:
+//   - 是否为 Empty 类型
+func isEmptyMessage(typeName string) bool {
+	return typeName == ".google.protobuf.Empty"
+}
+
+// isHttpBodyMessage 检查消息是否为 HttpBody 类型
+// 参数:
+//   - typeName: 类型全名
+//
+// 返回值:
+//   - 是否为 HttpBody 类型
+func isHttpBodyMessage(typeName string) bool {
+	return typeName == ".google.api.HttpBody"
+}
+
+// handleSpecialMessageTypes 处理特殊消息类型
+// 参数:
+//   - typeName: 类型全名
+//   - message: 消息描述符
+//
+// 返回值:
+//   - 特殊类型的模式，如果不是特殊类型则返回 nil
+func handleSpecialMessageTypes(typeName string, message protoreflect.MessageDescriptor) *v3.SchemaOrReference {
+	switch typeName {
+	case ".google.api.HttpBody":
+		return wellknown.NewGoogleApiHttpBodySchema()
+
+	case ".google.protobuf.Timestamp":
+		return wellknown.NewGoogleProtobufTimestampSchema()
+
+	case ".google.protobuf.Duration":
+		return wellknown.NewGoogleProtobufDurationSchema()
+
+	case ".google.type.Date":
+		return wellknown.NewGoogleTypeDateSchema()
+
+	case ".google.type.DateTime":
+		return wellknown.NewGoogleTypeDateTimeSchema()
+
+	case ".google.protobuf.FieldMask":
+		return wellknown.NewGoogleProtobufFieldMaskSchema()
+
+	case ".google.protobuf.Struct":
+		return wellknown.NewGoogleProtobufStructSchema()
+
+	case ".google.protobuf.Empty":
+		// Empty 更接近 JSON undefined 而非 null，因此忽略此字段
+		return nil
+
+	case ".google.protobuf.BoolValue":
+		return wellknown.NewBooleanSchema()
+
+	case ".google.protobuf.BytesValue":
+		return wellknown.NewBytesSchema()
+
+	case ".google.protobuf.Int32Value", ".google.protobuf.UInt32Value":
+		return wellknown.NewIntegerSchema(getValueKind(message))
+
+	case ".google.protobuf.StringValue", ".google.protobuf.Int64Value", ".google.protobuf.UInt64Value":
+		return wellknown.NewStringSchema()
+
+	case ".google.protobuf.FloatValue", ".google.protobuf.DoubleValue":
+		return wellknown.NewNumberSchema(getValueKind(message))
+
+	default:
+		return nil
+	}
+}
+
+// handleFieldByKind 根据字段类型处理字段
+// 参数:
+//   - field: 字段
+//   - desc: 字段描述符
+//   - kind: 字段类型
+//   - enumType: 枚举类型
+//   - schemaOrReferenceForField: 用于获取字段模式的函数
+//   - schemaOrReferenceForMessage: 用于获取消息模式的函数
+//
+// 返回值:
+//   - 模式或引用
+func handleFieldByKind(
+	field *protogen.Field,
+	desc protoreflect.FieldDescriptor,
+	kind protoreflect.Kind,
+	enumType string,
+	schemaOrReferenceForField func(*protogen.Field, protoreflect.FieldDescriptor) *v3.SchemaOrReference,
+	schemaOrReferenceForMessage func(protoreflect.MessageDescriptor) *v3.SchemaOrReference,
+) *v3.SchemaOrReference {
+	switch kind {
+	case protoreflect.MessageKind:
+		return handleMessageField(field, desc, schemaOrReferenceForField, schemaOrReferenceForMessage)
+	case protoreflect.StringKind:
+		return wellknown.NewStringSchema()
+	case protoreflect.Int32Kind, protoreflect.Sint32Kind, protoreflect.Uint32Kind,
+		protoreflect.Sfixed32Kind, protoreflect.Fixed32Kind:
+		return wellknown.NewIntegerSchema(kind.String())
+	case protoreflect.Int64Kind, protoreflect.Sint64Kind, protoreflect.Uint64Kind,
+		protoreflect.Sfixed64Kind, protoreflect.Fixed64Kind:
+		return wellknown.NewStringSchema()
+	case protoreflect.EnumKind:
+		return wellknown.NewEnumSchema(&enumType, field)
+	case protoreflect.BoolKind:
+		return wellknown.NewBooleanSchema()
+	case protoreflect.FloatKind, protoreflect.DoubleKind:
+		return wellknown.NewNumberSchema(kind.String())
+	case protoreflect.BytesKind:
+		return wellknown.NewBytesSchema()
+	default:
+		log.Printf("(TODO) Unsupported field type: %+v", fullMessageTypeName(field.Desc.Message()))
+		return nil
+	}
+}
+
+// handleMessageField 处理消息类型字段
+// 参数:
+//   - field: 字段
+//   - desc: 字段描述符
+//   - schemaOrReferenceForField: 用于获取字段模式的函数
+//   - schemaOrReferenceForMessage: 用于获取消息模式的函数
+//
+// 返回值:
+//   - 模式或引用
+func handleMessageField(
+	field *protogen.Field,
+	desc protoreflect.FieldDescriptor,
+	schemaOrReferenceForField func(*protogen.Field, protoreflect.FieldDescriptor) *v3.SchemaOrReference,
+	schemaOrReferenceForMessage func(protoreflect.MessageDescriptor) *v3.SchemaOrReference,
+) *v3.SchemaOrReference {
+	if desc.IsMap() {
+		// 处理映射类型
+		return wellknown.NewGoogleProtobufMapFieldEntrySchema(schemaOrReferenceForField(field, desc.MapValue()))
+	} else {
+		// 处理普通消息类型
+		return schemaOrReferenceForMessage(desc.Message())
+	}
+}
+
+// initializeDocument 初始化 OpenAPI 文档
+// 参数:
+//   - conf: 生成器配置
+//
+// 返回值:
+//   - 初始化后的 OpenAPI 文档
+func initializeDocument(conf Configuration) *v3.Document {
+	// 创建 OpenAPI 文档
+	document := &v3.Document{
+		Openapi: "3.0.0",
+		Info: &v3.Info{
+			Title:       *conf.Title,
+			Version:     *conf.Version,
+			Description: *conf.Description,
+		},
+		Components: &v3.Components{
+			Schemas: &v3.SchemasOrReferences{
+				AdditionalProperties: []*v3.NamedSchemaOrReference{},
+			},
+		},
+	}
+
+	return document
 }

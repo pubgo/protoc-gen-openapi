@@ -60,20 +60,20 @@ func NewOpenAPIv3Reflector(conf Configuration) *OpenAPIv3Reflector {
 //
 // 返回值:
 //   - 格式化后的消息名称
-func (r *OpenAPIv3Reflector) formatMessageName(message protoreflect.MessageDescriptor) string {
+func formatMessageName(conf *Configuration, message protoreflect.MessageDescriptor) string {
 	typeName := fullMessageTypeName(message)
 	name := getMessageName(message)
 
 	// 使用特殊名称处理内置类型
-	if !*r.conf.FQSchemaNaming {
-		name = r.handleBuiltInTypes(typeName, name)
+	if !*conf.FQSchemaNaming {
+		name = handleBuiltInTypes(typeName, name)
 	}
 
 	// 根据命名配置处理名称格式
-	name = r.applyNamingConventions(name)
+	name = applyNamingConventions(name, *conf.Naming)
 
 	// 是否使用完全限定名称
-	if *r.conf.FQSchemaNaming {
+	if *conf.FQSchemaNaming {
 		packageName := string(message.ParentFile().Package())
 		name = packageName + "." + name
 	}
@@ -141,11 +141,11 @@ func (r *OpenAPIv3Reflector) responseContentForMessage(message protoreflect.Mess
 	typeName := fullMessageTypeName(message)
 
 	// 处理特殊类型
-	if r.isEmptyMessage(typeName) {
+	if isEmptyMessage(typeName) {
 		return "200", &v3.MediaTypes{}
 	}
 
-	if r.isHttpBodyMessage(typeName) {
+	if isHttpBodyMessage(typeName) {
 		return "200", wellknown.NewGoogleApiHttpBodyMediaType()
 	}
 
@@ -180,7 +180,7 @@ func (r *OpenAPIv3Reflector) isHttpBodyMessage(typeName string) bool {
 // 返回值:
 //   - 模式引用
 func (r *OpenAPIv3Reflector) schemaReferenceForMessage(message protoreflect.MessageDescriptor) string {
-	schemaName := r.formatMessageName(message)
+	schemaName := formatMessageName(&r.conf, message)
 	if !contains(r.requiredSchemas, schemaName) {
 		r.requiredSchemas = append(r.requiredSchemas, schemaName)
 	}
@@ -198,7 +198,7 @@ func (r *OpenAPIv3Reflector) schemaOrReferenceForMessage(message protoreflect.Me
 	typeName := fullMessageTypeName(message)
 
 	// 处理特殊类型
-	if schema := r.handleSpecialMessageTypes(typeName, message); schema != nil {
+	if schema := handleSpecialMessageTypes(typeName, message); schema != nil {
 		return schema
 	}
 
@@ -279,7 +279,14 @@ func (r *OpenAPIv3Reflector) schemaOrReferenceForField(field *protogen.Field, de
 	kind := desc.Kind()
 
 	// 处理不同类型的字段
-	kindSchema = r.handleFieldByKind(field, desc, kind)
+	kindSchema = handleFieldByKind(
+		field,
+		desc,
+		kind,
+		*r.conf.EnumType,
+		r.schemaOrReferenceForField,
+		r.schemaOrReferenceForMessage,
+	)
 
 	// 处理列表类型
 	if field.Desc.IsList() {

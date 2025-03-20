@@ -92,7 +92,7 @@ func (g *OpenAPIv3Generator) Run(outputFile *protogen.GeneratedFile) error {
 // buildDocumentV3 builds an OpenAPIv3 document for a plugin request.
 func (g *OpenAPIv3Generator) buildDocumentV3() *v3.Document {
 	// 初始化文档
-	d := g.initializeDocument()
+	d := initializeDocument(g.conf)
 
 	// 处理文件
 	g.processFiles(d)
@@ -105,27 +105,6 @@ func (g *OpenAPIv3Generator) buildDocumentV3() *v3.Document {
 
 	// 排序文档
 	g.sortDocument(d)
-
-	return d
-}
-
-// initializeDocument initializes the document with basic information
-func (g *OpenAPIv3Generator) initializeDocument() *v3.Document {
-	d := &v3.Document{}
-
-	d.Openapi = "3.0.3"
-	d.Info = &v3.Info{
-		Version:     *g.conf.Version,
-		Title:       *g.conf.Title,
-		Description: *g.conf.Description,
-	}
-
-	d.Paths = &v3.Paths{}
-	d.Components = &v3.Components{
-		Schemas: &v3.SchemasOrReferences{
-			AdditionalProperties: []*v3.NamedSchemaOrReference{},
-		},
-	}
 
 	return d
 }
@@ -743,7 +722,7 @@ func (g *OpenAPIv3Generator) addOperationToDocumentV3(d *v3.Document, op *v3.Ope
 // addPathsToDocumentV3 adds paths to document from services
 func (g *OpenAPIv3Generator) addPathsToDocumentV3(d *v3.Document, services []*protogen.Service) {
 	for _, service := range services {
-		serviceExtension := g.extractServiceExtension(service)
+		serviceExtension := extractServiceExtension(service)
 		annotationsCount := 0
 
 		for _, method := range service.Methods {
@@ -757,7 +736,7 @@ func (g *OpenAPIv3Generator) addPathsToDocumentV3(d *v3.Document, services []*pr
 }
 
 // extractServiceExtension extracts service extensions from service options
-func (g *OpenAPIv3Generator) extractServiceExtension(service *protogen.Service) *servicev3.Service {
+func extractServiceExtension(service *protogen.Service) *servicev3.Service {
 	serviceExtension, _ := proto.GetExtension(service.Desc.Options(), servicev3.E_Service).(*servicev3.Service)
 	return serviceExtension
 }
@@ -983,7 +962,7 @@ func (g *OpenAPIv3Generator) addSchemasForMessagesToDocumentV3(d *v3.Document, m
 			g.addSchemasForMessagesToDocumentV3(d, message.Messages)
 		}
 
-		schemaName := g.reflect.formatMessageName(message.Desc)
+		schemaName := formatMessageName(&g.conf, message.Desc)
 
 		// Only generate this if we need it and haven't already generated it.
 		if !contains(g.reflect.requiredSchemas, schemaName) ||
