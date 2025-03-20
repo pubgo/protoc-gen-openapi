@@ -320,10 +320,10 @@ func findField(name string, inMessage *protogen.Message) *protogen.Field {
 	return nil
 }
 
-func (g *OpenAPIv3Generator) findAndFormatFieldName(name string, inMessage *protogen.Message) string {
+func findAndFormatFieldName(cfg *Configuration, name string, inMessage *protogen.Message) string {
 	field := findField(name, inMessage)
 	if field != nil {
-		return formatFieldName(*g.conf.Naming, field.Desc)
+		return formatFieldName(*cfg.Naming, field.Desc)
 	}
 
 	return name
@@ -585,42 +585,46 @@ func (g *OpenAPIv3Generator) processSimplePathParameters(
 	coveredParameters []string,
 	inputMessage *protogen.Message,
 ) ([]*v3.ParameterOrReference, []string, string) {
-	if allMatches := pathPattern.FindAllStringSubmatch(path, -1); allMatches != nil {
-		for _, matches := range allMatches {
-			coveredParameters = append(coveredParameters, matches[1])
-			pathParameter := g.findAndFormatFieldName(matches[1], inputMessage)
-			path = strings.Replace(path, matches[1], pathParameter, 1)
-
-			var fieldSchema *v3.SchemaOrReference
-			var fieldDescription string
-			field := findField(pathParameter, inputMessage)
-			if field != nil {
-				fieldSchema = g.reflect.schemaOrReferenceForField(field, nil)
-				fieldDescription = filterCommentString(field.Comments.Leading)
-			} else {
-				fieldSchema = &v3.SchemaOrReference{
-					Oneof: &v3.SchemaOrReference_Schema{
-						Schema: &v3.Schema{
-							Type: "string",
-						},
-					},
-				}
-			}
-
-			parameters = append(parameters,
-				&v3.ParameterOrReference{
-					Oneof: &v3.ParameterOrReference_Parameter{
-						Parameter: &v3.Parameter{
-							Name:        pathParameter,
-							In:          "path",
-							Description: fieldDescription,
-							Required:    true,
-							Schema:      fieldSchema,
-						},
-					},
-				})
-		}
+	allMatches := pathPattern.FindAllStringSubmatch(path, -1)
+	if allMatches == nil {
+		return parameters, coveredParameters, path
 	}
+
+	for _, matches := range allMatches {
+		coveredParameters = append(coveredParameters, matches[1])
+		pathParameter := findAndFormatFieldName(&g.conf, matches[1], inputMessage)
+		path = strings.Replace(path, matches[1], pathParameter, 1)
+
+		var fieldSchema *v3.SchemaOrReference
+		var fieldDescription string
+		field := findField(pathParameter, inputMessage)
+		if field != nil {
+			fieldSchema = g.reflect.schemaOrReferenceForField(field, nil)
+			fieldDescription = filterCommentString(field.Comments.Leading)
+		} else {
+			fieldSchema = &v3.SchemaOrReference{
+				Oneof: &v3.SchemaOrReference_Schema{
+					Schema: &v3.Schema{
+						Type: "string",
+					},
+				},
+			}
+		}
+
+		parameters = append(parameters,
+			&v3.ParameterOrReference{
+				Oneof: &v3.ParameterOrReference_Parameter{
+					Parameter: &v3.Parameter{
+						Name:        pathParameter,
+						In:          "path",
+						Description: fieldDescription,
+						Required:    true,
+						Schema:      fieldSchema,
+					},
+				},
+			})
+	}
+
 	return parameters, coveredParameters, path
 }
 
@@ -639,7 +643,7 @@ func (g *OpenAPIv3Generator) processNamedPathParameters(
 		parts := strings.Split(starredPath, "/")
 		for i := 0; i < len(parts)-1; i += 2 {
 			section := parts[i]
-			namedPathParameter := g.findAndFormatFieldName(section, inputMessage)
+			namedPathParameter := findAndFormatFieldName(&g.conf, section, inputMessage)
 			namedPathParameter = singular(namedPathParameter)
 			parts[i+1] = "{" + namedPathParameter + "}"
 			namedPathParameters = append(namedPathParameters, namedPathParameter)
