@@ -6,18 +6,38 @@ import (
 	"log/slog"
 	"os"
 
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/pluginpb"
-
 	"github.com/pubgo/protoc-gen-openapi/internal/converter"
 	_ "github.com/pubgo/protoc-gen-openapi/internal/logging"
 	"github.com/pubgo/protoc-gen-openapi/version"
+
+	gengo "google.golang.org/protobuf/cmd/protoc-gen-go/internal_gengo"
+	"google.golang.org/protobuf/compiler/protogen"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/pluginpb"
 )
 
 var showVersion = flag.Bool("version", false, "print the version and exit")
 
 func main() {
 	flag.Parse()
+
+	protogen.Options{ParamFunc: flag.CommandLine.Set}.Run(func(gen *protogen.Plugin) error {
+		gen.SupportedFeatures = gengo.SupportedFeatures
+		var originFiles []*protogen.GeneratedFile
+
+		for _, f := range gen.Files {
+			if !f.Generate {
+				continue
+			}
+
+			originFiles = append(originFiles, gengo.GenerateFile(gen, f))
+		}
+
+		for _, f := range originFiles {
+			f.Skip()
+		}
+		return nil
+	})
 
 	if *showVersion {
 		fmt.Printf("protoc-gen-openapi %s\n", version.FullVersion())
