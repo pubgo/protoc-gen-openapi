@@ -1,0 +1,29 @@
+openapi: 3.1.0
+info: {}
+paths: {}
+components:
+  schemas:
+    Allocation:
+      type: object
+      properties:
+        totalSize:
+          type:
+            - integer
+            - string
+          title: total_size
+          format: int64
+        used:
+          type:
+            - integer
+            - string
+          title: used
+          format: int64
+      title: Allocation
+      additionalProperties: false
+      description: |+
+        Used should be less or equal to the total size:
+        ```
+        this.used <= this.total_size
+        ```
+
+security: []

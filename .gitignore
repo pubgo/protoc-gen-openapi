@@ -23,3 +23,14 @@ extensions/sample/generated
 /vendor
 /bin
 /proto-vendor
+
+# Go workspace file
+go.work
+
+redoc-static.html
+
+out
+dist
+
+coverage.out
+coverage.html

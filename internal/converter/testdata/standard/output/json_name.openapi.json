@@ -1,0 +1,38 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "json_name"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "json_name.Message.inline": {
+        "type": "string",
+        "title": "inline",
+        "enum": [
+          "FOO",
+          "BAR"
+        ]
+      },
+      "json_name.Message": {
+        "type": "object",
+        "properties": {
+          "json_description": {
+            "type": "string",
+            "title": "description"
+          },
+          "json_stuff": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/json_name.Message.inline"
+            },
+            "title": "stuff"
+          }
+        },
+        "title": "Message",
+        "additionalProperties": false
+      }
+    }
+  },
+  "security": []
+}

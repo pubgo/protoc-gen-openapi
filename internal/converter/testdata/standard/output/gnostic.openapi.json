@@ -1,0 +1,428 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Title from annotation",
+    "description": "Description from annotation\n\n## example_with_gnostic.Greeter\n\nThe greeting service definition.",
+    "contact": {
+      "name": "Contact Name",
+      "url": "https://github.com/sudorandom/protoc-gen-connect-openapi",
+      "email": "hello@sudorandom.com"
+    },
+    "license": {
+      "name": "MIT License",
+      "url": "https://github.com/sudorandom/protoc-gen-connect-openapi/blob/master/LICENSE"
+    },
+    "version": "Version from annotation"
+  },
+  "paths": {
+    "/example_with_gnostic.Greeter/SayHello": {
+      "get": {
+        "tags": [
+          "example_with_gnostic.Greeter"
+        ],
+        "summary": "SayHello",
+        "description": "Sends a greeting",
+        "operationId": "example_with_gnostic.Greeter.SayHello.get",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          },
+          {
+            "name": "message",
+            "in": "query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/example_with_gnostic.HelloRequest"
+                }
+              }
+            }
+          },
+          {
+            "name": "encoding",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/encoding"
+            }
+          },
+          {
+            "name": "base64",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/base64"
+            }
+          },
+          {
+            "name": "compression",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/compression"
+            }
+          },
+          {
+            "name": "connect",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/connect"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/example_with_gnostic.HelloReply"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "user is not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true,
+        "security": [
+          {
+            "BasicAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "example_with_gnostic.Greeter"
+        ],
+        "summary": "SayHello",
+        "description": "Sends a greeting",
+        "operationId": "example_with_gnostic.Greeter.SayHello",
+        "parameters": [
+          {
+            "name": "Connect-Protocol-Version",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/connect-protocol-version"
+            }
+          },
+          {
+            "name": "Connect-Timeout-Ms",
+            "in": "header",
+            "schema": {
+              "$ref": "#/components/schemas/connect-timeout-header"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/example_with_gnostic.HelloRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/example_with_gnostic.HelloReply"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "user is not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/connect.error"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true,
+        "security": [
+          {
+            "BasicAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/path/to/say-hello2": {
+      "get": {
+        "tags": [
+          "extra-tag",
+          "example_with_gnostic.Greeter"
+        ],
+        "summary": "SayHello2",
+        "operationId": "example_with_gnostic.Greeter.SayHello2",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "examples": [
+                "Example value"
+              ],
+              "title": "Custom title for a field",
+              "maxLength": 1000,
+              "minLength": 3,
+              "pattern": "/^[a-z ,.'-]+$/i",
+              "additionalProperties": false,
+              "description": "Custom description for a field",
+              "nullable": true,
+              "externalDocs": {
+                "description": "example",
+                "url": "https://example.com"
+              },
+              "deprecated": true
+            }
+          },
+          {
+            "name": "number",
+            "in": "query",
+            "schema": {
+              "exclusiveMaximum": 1000,
+              "exclusiveMinimum": 20,
+              "type": "integer",
+              "title": "number",
+              "multipleOf": 20,
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/example_with_gnostic.HelloReply"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/example_with_gnostic.HelloReply"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "example_with_gnostic.HelloReply": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "message"
+          }
+        },
+        "title": "HelloReply",
+        "additionalProperties": false,
+        "description": "The response message containing the greetings"
+      },
+      "example_with_gnostic.HelloRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "examples": [
+              "Example value"
+            ],
+            "title": "Custom title for a field",
+            "maxLength": 1000,
+            "minLength": 3,
+            "pattern": "/^[a-z ,.'-]+$/i",
+            "additionalProperties": false,
+            "description": "Custom description for a field",
+            "nullable": true,
+            "externalDocs": {
+              "description": "example",
+              "url": "https://example.com"
+            },
+            "deprecated": true
+          },
+          "number": {
+            "exclusiveMaximum": 1000,
+            "exclusiveMinimum": 20,
+            "type": "integer",
+            "title": "number",
+            "multipleOf": 20,
+            "format": "int32"
+          }
+        },
+        "title": "Custom title for a message",
+        "additionalProperties": false,
+        "description": "Custom description for a message"
+      },
+      "encoding": {
+        "title": "encoding",
+        "enum": [
+          "proto",
+          "json"
+        ],
+        "description": "Define which encoding or 'Message-Codec' to use"
+      },
+      "base64": {
+        "type": "boolean",
+        "title": "base64",
+        "description": "Specifies if the message query param is base64 encoded, which may be required for binary data"
+      },
+      "compression": {
+        "title": "compression",
+        "enum": [
+          "identity",
+          "gzip",
+          "br"
+        ],
+        "description": "Which compression algorithm to use for this request"
+      },
+      "connect": {
+        "title": "connect",
+        "enum": [
+          "v1"
+        ],
+        "description": "Define the version of the Connect protocol"
+      },
+      "connect-protocol-version": {
+        "type": "number",
+        "title": "Connect-Protocol-Version",
+        "enum": [
+          1
+        ],
+        "description": "Define the version of the Connect protocol",
+        "const": 1
+      },
+      "connect-timeout-header": {
+        "type": "number",
+        "title": "Connect-Timeout-Ms",
+        "description": "Define the timeout, in ms"
+      },
+      "connect.error": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "examples": [
+              "not_found"
+            ],
+            "enum": [
+              "canceled",
+              "unknown",
+              "invalid_argument",
+              "deadline_exceeded",
+              "not_found",
+              "already_exists",
+              "permission_denied",
+              "resource_exhausted",
+              "failed_precondition",
+              "aborted",
+              "out_of_range",
+              "unimplemented",
+              "internal",
+              "unavailable",
+              "data_loss",
+              "unauthenticated"
+            ],
+            "description": "The status code, which should be an enum value of [google.rpc.Code][google.rpc.Code]."
+          },
+          "message": {
+            "type": "string",
+            "description": "A developer-facing error message, which should be in English. Any user-facing error message should be localized and sent in the [google.rpc.Status.details][google.rpc.Status.details] field, or localized by the client."
+          },
+          "detail": {
+            "$ref": "#/components/schemas/google.protobuf.Any"
+          }
+        },
+        "title": "Connect Error",
+        "additionalProperties": true,
+        "description": "Error type returned by Connect: https://connectrpc.com/docs/go/errors/#http-representation"
+      },
+      "google.protobuf.Any": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string",
+            "format": "binary"
+          },
+          "debug": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true,
+        "description": "Contains an arbitrary serialized message along with a @type that describes the type of the serialized message."
+      }
+    },
+    "securitySchemes": {
+      "BasicAuth": {
+        "type": "http",
+        "scheme": "basic"
+      }
+    }
+  },
+  "security": [],
+  "tags": [
+    {
+      "name": "example_with_gnostic.Greeter",
+      "description": "The greeting service definition."
+    }
+  ]
+}

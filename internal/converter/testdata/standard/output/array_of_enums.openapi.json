@@ -1,0 +1,38 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "enums"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "enums.ArrayOfEnums.inline": {
+        "type": "string",
+        "title": "inline",
+        "enum": [
+          "FOO",
+          "BAR"
+        ]
+      },
+      "enums.ArrayOfEnums": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string",
+            "title": "description"
+          },
+          "stuff": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/enums.ArrayOfEnums.inline"
+            },
+            "title": "stuff"
+          }
+        },
+        "title": "ArrayOfEnums",
+        "additionalProperties": false
+      }
+    }
+  },
+  "security": []
+}

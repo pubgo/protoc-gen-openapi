@@ -1,0 +1,28 @@
+openapi: 3.1.0
+info:
+  title: messages
+paths: {}
+components:
+  schemas:
+    messages.ArrayOfMessages:
+      type: object
+      properties:
+        description:
+          type: string
+          title: description
+        things:
+          type: array
+          items:
+            $ref: '#/components/schemas/messages.Thing'
+          title: things
+      title: ArrayOfMessages
+      additionalProperties: false
+    messages.Thing:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+      title: Thing
+      additionalProperties: false
+security: []

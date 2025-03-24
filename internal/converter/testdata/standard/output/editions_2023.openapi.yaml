@@ -1,0 +1,36 @@
+openapi: 3.1.0
+info:
+  title: editions
+paths: {}
+components:
+  schemas:
+    editions.Person.Employment:
+      type: string
+      title: Employment
+      enum:
+        - EMPLOYMENT_UNSPECIFIED
+        - EMPLOYMENT_FULLTIME
+        - EMPLOYMENT_PARTTIME
+    editions.Person.Pay_Type:
+      type: string
+      title: Pay_Type
+      enum:
+        - PAY_TYPE_UNSPECIFIED
+        - PAY_TYPE_SALARY
+        - PAY_TYPE_HOURLY
+    editions.Person:
+      type: object
+      properties:
+        name:
+          type: string
+          title: name
+        id:
+          type: integer
+          title: id
+          format: int32
+        employment:
+          title: employment
+          $ref: '#/components/schemas/editions.Person.Employment'
+      title: Person
+      additionalProperties: false
+security: []
