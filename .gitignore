@@ -21,3 +21,5 @@ Package.resolved
 extensions/sample/generated
 /.proto
 /vendor
+/bin
+/proto-vendor
