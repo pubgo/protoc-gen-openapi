@@ -12,35 +12,50 @@ import (
 type Options struct {
 	// Format is either 'yaml' or 'json' and is the format of the output OpenAPI file(s).
 	Format string
+
 	// BaseOpenAPI is the file contents of a base OpenAPI file.
 	BaseOpenAPI []byte
+
 	// WithStreaming will content types related to streaming (warning: can be messy).
 	WithStreaming bool
+
 	// AllowGET will let methods with `idempotency_level = NO_SIDE_EFFECTS` to be documented with GET requests.
 	AllowGET bool
+
 	// ContentTypes is a map of all content types. Available values are in Protocols.
 	ContentTypes map[string]struct{}
+
 	// Debug enables debug logging if set to true.
 	Debug bool
+
 	// IncludeNumberEnumValues indicates if numbers are included for enum values in addition to the string representations.
 	IncludeNumberEnumValues bool
+
 	// WithProtoNames indicates if protobuf field names should be used instead of JSON names.
 	WithProtoNames bool
+
 	// Path is the output OpenAPI path.
 	Path string
+
 	// PathPrefix is a prefix that is prepended to every HTTP path.
 	PathPrefix string
+
 	// TrimUnusedTypes will remove types that aren't referenced by a service.
 	TrimUnusedTypes bool
+
 	// WithProtoAnnotations will add some protobuf annotations for descriptions
 	WithProtoAnnotations bool
+
 	// FullyQualifiedMessageNames uses the full path for message types: {pkg}.{name} instead of just the name. This
 	// is helpful if you are mixing types from multiple services.
 	FullyQualifiedMessageNames bool
+
 	// WithServiceDescriptions set to true will cause service names and their comments to be added to the end of info.description.
 	WithServiceDescriptions bool
+
 	// IgnoreGoogleapiHTTP set to true will cause service to always generate OpenAPI specs for connect endpoints, and ignore any google.api.http options.
 	IgnoreGoogleapiHTTP bool
+
 	// Services filters which services will be used for generating OpenAPI spec.
 	Services []protoreflect.FullName
 
