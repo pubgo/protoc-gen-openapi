@@ -6,8 +6,88 @@ import (
 	"path"
 	"strings"
 
+	"github.com/samber/lo"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
+
+type Config struct {
+	AllowGetFlag                   *bool
+	BaseFlag                       *string
+	ContentTypesFlag               *string
+	DebugFlag                      *bool
+	FormatFlag                     *string
+	IgnoreGoogleApiHttpFlag        *bool
+	IncludeNumberEnumValuesFlag    *bool
+	PathFlag                       *string
+	PathPrefixFlag                 *string
+	ProtoFlag                      *bool
+	ServicesFlag                   *string
+	TrimUnusedTypesFlag            *bool
+	WithProtoAnnotationsFlag       *bool
+	WithProtoNamesFlag             *bool
+	WithStreamingFlag              *bool
+	FullyQualifiedMessageNamesFlag *bool
+	WithServiceDescriptions        *bool
+}
+
+func (c Config) ToOptions() (Options, error) {
+	opts := NewOptions()
+
+	opts.Debug = lo.FromPtr(c.DebugFlag)
+	opts.IncludeNumberEnumValues = lo.FromPtr(c.IncludeNumberEnumValuesFlag)
+	opts.AllowGET = lo.FromPtr(c.AllowGetFlag)
+	opts.WithStreaming = lo.FromPtr(c.WithStreamingFlag)
+	opts.WithProtoNames = lo.FromPtr(c.WithProtoNamesFlag)
+	opts.WithProtoAnnotations = lo.FromPtr(c.WithProtoAnnotationsFlag)
+	opts.TrimUnusedTypes = lo.FromPtr(c.TrimUnusedTypesFlag)
+	opts.FullyQualifiedMessageNames = lo.FromPtr(c.FullyQualifiedMessageNamesFlag)
+	opts.WithServiceDescriptions = lo.FromPtr(c.WithServiceDescriptions)
+	opts.IgnoreGoogleapiHTTP = lo.FromPtr(c.IgnoreGoogleApiHttpFlag)
+	opts.Path = lo.FromPtr(c.PathFlag)
+	opts.PathPrefix = lo.FromPtr(c.PathPrefixFlag)
+	opts.Format = lo.FromPtr(c.FormatFlag)
+	if !lo.Contains([]string{"yaml", "json"}, opts.Format) {
+		return opts, fmt.Errorf("format be yaml or json, not '%s'", opts.Format)
+	}
+
+	contentTypes := map[string]struct{}{}
+	supportedProtocols := map[string]struct{}{}
+	for _, proto := range Protocols {
+		supportedProtocols[proto.Name] = struct{}{}
+	}
+	for _, contentType := range strings.Split(lo.FromPtr(c.ContentTypesFlag), ";") {
+		contentType = strings.TrimSpace(contentType)
+		_, isSupportedProtocol := supportedProtocols[contentType]
+		if !isSupportedProtocol {
+			return opts, fmt.Errorf("invalid content type: '%s'", contentType)
+		}
+		contentTypes[contentType] = struct{}{}
+	}
+
+	basePath := lo.FromPtr(c.BaseFlag)
+	if basePath != "" {
+		ext := path.Ext(basePath)
+		switch ext {
+		case ".yaml", ".yml", ".json":
+			body, err := os.ReadFile(basePath)
+			if err != nil {
+				return opts, err
+			}
+			opts.BaseOpenAPI = body
+		default:
+			return opts, fmt.Errorf("the file extension for 'base' should end with yaml or json, not '%s'", ext)
+		}
+	}
+
+	for _, service := range strings.Split(lo.FromPtr(c.ServicesFlag), ",") {
+		opts.Services = append(opts.Services, protoreflect.FullName(service))
+	}
+
+	if len(contentTypes) > 0 {
+		opts.ContentTypes = contentTypes
+	}
+	return opts, nil
+}
 
 type Options struct {
 	// Format is either 'yaml' or 'json' and is the format of the output OpenAPI file(s).
@@ -83,89 +163,6 @@ func NewOptions() Options {
 			"json": {},
 		},
 	}
-}
-
-func FromString(s string) (Options, error) {
-	opts := NewOptions()
-
-	supportedProtocols := map[string]struct{}{}
-	for _, proto := range Protocols {
-		supportedProtocols[proto.Name] = struct{}{}
-	}
-
-	contentTypes := map[string]struct{}{}
-	for _, param := range strings.Split(s, ",") {
-		switch {
-		case param == "":
-		case param == "debug":
-			opts.Debug = true
-		case param == "include-number-enum-values":
-			opts.IncludeNumberEnumValues = true
-		case param == "allow-get":
-			opts.AllowGET = true
-		case param == "with-streaming":
-			opts.WithStreaming = true
-		case param == "with-proto-names":
-			opts.WithProtoNames = true
-		case param == "with-proto-annotations":
-			opts.WithProtoAnnotations = true
-		case param == "trim-unused-types":
-			opts.TrimUnusedTypes = true
-		case param == "fully-qualified-message-names":
-			opts.FullyQualifiedMessageNames = true
-		case param == "with-service-descriptions":
-			opts.WithServiceDescriptions = true
-		case param == "ignore-googleapi-http":
-			opts.IgnoreGoogleapiHTTP = true
-		case strings.HasPrefix(param, "content-types="):
-			for _, contentType := range strings.Split(param[14:], ";") {
-				contentType = strings.TrimSpace(contentType)
-				_, isSupportedProtocol := supportedProtocols[contentType]
-				if !isSupportedProtocol {
-					return opts, fmt.Errorf("invalid content type: '%s'", contentType)
-				}
-				contentTypes[contentType] = struct{}{}
-			}
-		case strings.HasPrefix(param, "path="):
-			opts.Path = param[5:]
-		case strings.HasPrefix(param, "path-prefix="):
-			opts.PathPrefix = param[12:]
-		case strings.HasPrefix(param, "format="):
-			format := param[7:]
-			switch format {
-			case "yaml":
-				opts.Format = "yaml"
-			case "json":
-				opts.Format = "json"
-			default:
-				return opts, fmt.Errorf("format be yaml or json, not '%s'", format)
-			}
-		case strings.HasPrefix(param, "base="):
-			basePath := param[5:]
-			ext := path.Ext(basePath)
-			switch ext {
-			case ".yaml", ".yml", ".json":
-				body, err := os.ReadFile(basePath)
-				if err != nil {
-					return opts, err
-				}
-				opts.BaseOpenAPI = body
-			default:
-				return opts, fmt.Errorf("the file extension for 'base' should end with yaml or json, not '%s'", ext)
-			}
-		case strings.HasPrefix(param, "services="):
-			services := strings.Split(param[9:], ",")
-			for _, service := range services {
-				opts.Services = append(opts.Services, protoreflect.FullName(service))
-			}
-		default:
-			return opts, fmt.Errorf("invalid parameter: %s", param)
-		}
-	}
-	if len(contentTypes) > 0 {
-		opts.ContentTypes = contentTypes
-	}
-	return opts, nil
 }
 
 func IsValidContentType(contentType string) bool {

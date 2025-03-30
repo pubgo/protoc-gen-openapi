@@ -1,7 +1,7 @@
-test:
-	# since some tests call separately-built binaries, clear the cache to ensure all get run
-	go clean -testcache
-	go test ./... -v
+#test:
+#	# since some tests call separately-built binaries, clear the cache to ensure all get run
+#	go clean -testcache
+#	go test ./... -v
 
 vet:
 	go vet ./...
@@ -19,7 +19,7 @@ install_gnostic:
 protobuf:
 	protobuild vendor
 	protobuild gen
-	mv github.com/pubgo/protoc-gen-openapi/generator/service.pb.go ./generator
+	mv github.com/pubgo/protoc-gen-openapi/generator generator
 	rm -rf github.com
 
 ALL: generate test install

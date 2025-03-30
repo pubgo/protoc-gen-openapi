@@ -3,7 +3,6 @@ package converter
 import (
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -15,11 +14,11 @@ import (
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/index"
 	"github.com/pb33f/libopenapi/orderedmap"
-	"google.golang.org/protobuf/proto"
+	"github.com/samber/lo"
+	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
-	pluginpb "google.golang.org/protobuf/types/pluginpb"
 	"gopkg.in/yaml.v3"
 
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/gnostic"
@@ -27,32 +26,13 @@ import (
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/util"
 )
 
-func ConvertFrom(rd io.Reader) (*pluginpb.CodeGeneratorResponse, error) {
-	input, err := io.ReadAll(rd)
+func Convert(gen *protogen.Plugin, cfg options.Config) error {
+	opts, err := cfg.ToOptions()
 	if err != nil {
-		return nil, fmt.Errorf("failed to read request: %w", err)
+		return err
 	}
 
-	req := &pluginpb.CodeGeneratorRequest{}
-	err = proto.Unmarshal(input, req)
-	if err != nil {
-		return nil, fmt.Errorf("can't unmarshal input: %w", err)
-	}
-
-	return Convert(req)
-}
-
-// Convert is the primary entrypoint for the protoc plugin. It takes a *pluginpb.CodeGeneratorRequest
-// and returns a *pluginpb.CodeGeneratorResponse.
-func Convert(req *pluginpb.CodeGeneratorRequest) (*pluginpb.CodeGeneratorResponse, error) {
-	opts, err := options.FromString(req.GetParameter())
-	if err != nil {
-		return nil, err
-	}
-	return ConvertWithOptions(req, opts)
-}
-
-func ConvertWithOptions(req *pluginpb.CodeGeneratorRequest, opts options.Options) (*pluginpb.CodeGeneratorResponse, error) {
+	var req = gen.Request
 	annotator := &annotator{}
 	if opts.MessageAnnotator == nil {
 		opts.MessageAnnotator = annotator
@@ -72,7 +52,6 @@ func ConvertWithOptions(req *pluginpb.CodeGeneratorRequest, opts options.Options
 		))
 	}
 
-	files := []*pluginpb.CodeGeneratorResponse_File{}
 	genFiles := make(map[string]struct{}, len(req.FileToGenerate))
 	for _, file := range req.FileToGenerate {
 		genFiles[file] = struct{}{}
@@ -83,7 +62,7 @@ func ConvertWithOptions(req *pluginpb.CodeGeneratorRequest, opts options.Options
 		File: req.GetProtoFile(),
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	newSpec := func() (*v3.Document, error) {
@@ -113,7 +92,7 @@ func ConvertWithOptions(req *pluginpb.CodeGeneratorRequest, opts options.Options
 
 	spec, err := newSpec()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	outFiles := map[string]*v3.Document{}
 
@@ -127,21 +106,21 @@ func ConvertWithOptions(req *pluginpb.CodeGeneratorRequest, opts options.Options
 		fd, err := resolver.FindFileByPath(fileDesc.GetName())
 		if err != nil {
 			slog.Error("error loading file", slog.Any("error", err))
-			return nil, err
+			return err
 		}
 
 		// Create a per-file openapi spec if we're not merging all into one
 		if opts.Path == "" {
 			spec, err = newSpec()
 			if err != nil {
-				return nil, err
+				return err
 			}
 			spec.Info.Title = string(fd.FullName())
 			spec.Info.Description = util.FormatComments(fd.SourceLocations().ByDescriptor(fd))
 		}
 
 		if err := appendToSpec(opts, spec, fd); err != nil {
-			return nil, err
+			return err
 		}
 
 		if opts.Path == "" {
@@ -158,26 +137,16 @@ func ConvertWithOptions(req *pluginpb.CodeGeneratorRequest, opts options.Options
 	}
 
 	for path, spec := range outFiles {
-		path := path
-		spec := spec
 		content, err := specToFile(opts, spec)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		files = append(files, &pluginpb.CodeGeneratorResponse_File{
-			Name:              &path,
-			Content:           &content,
-			GeneratedCodeInfo: &descriptorpb.GeneratedCodeInfo{},
-		})
+
+		gg := gen.NewGeneratedFile(path, "")
+		lo.Must(gg.Write([]byte(content)))
 	}
 
-	features := uint64(pluginpb.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL | pluginpb.CodeGeneratorResponse_FEATURE_SUPPORTS_EDITIONS)
-	return &pluginpb.CodeGeneratorResponse{
-		SupportedFeatures: &features,
-		MinimumEdition:    proto.Int32(int32(descriptorpb.Edition_EDITION_PROTO2)),
-		MaximumEdition:    proto.Int32(int32(descriptorpb.Edition_EDITION_2024)),
-		File:              files,
-	}, nil
+	return nil
 }
 
 func mergeTags(tags []*base.Tag) []*base.Tag {
