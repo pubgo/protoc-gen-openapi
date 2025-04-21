@@ -15,6 +15,7 @@ import (
 	"github.com/pb33f/libopenapi/index"
 	"github.com/pb33f/libopenapi/orderedmap"
 	"github.com/pubgo/funk/assert"
+	"github.com/pubgo/funk/errors/errcheck"
 	"github.com/pubgo/funk/recovery"
 	"github.com/samber/lo"
 	"google.golang.org/protobuf/compiler/protogen"
@@ -138,18 +139,17 @@ func Convert(gen *protogen.Plugin, cfg options.Config) (gErr error) {
 }
 
 func mergeTags(tags []*base.Tag) []*base.Tag {
-
 	if len(tags) == 0 {
 		return tags
 	}
 
-	res := make([]*base.Tag, 0, len(tags))
+	tagList := make([]*base.Tag, 0, len(tags))
 	found := make(map[string]*base.Tag)
 
 	for _, tag := range tags {
 		if found[tag.Name] == nil {
 			found[tag.Name] = tag
-			res = append(res, tag)
+			tagList = append(tagList, tag)
 			continue
 		}
 
@@ -166,7 +166,7 @@ func mergeTags(tags []*base.Tag) []*base.Tag {
 		}
 	}
 
-	return res
+	return tagList
 }
 
 func specToFile(opts options.Options, spec *v3.Document) (string, error) {
@@ -174,21 +174,18 @@ func specToFile(opts options.Options, spec *v3.Document) (string, error) {
 	case "yaml":
 		return string(spec.RenderWithIndention(2)), nil
 	case "json":
-		b, err := spec.RenderJSON("  ")
-		if err != nil {
-			return "", err
-		}
+		b := assert.Must1(spec.RenderJSON("  "))
 		return string(b), nil
 	default:
 		return "", fmt.Errorf("unknown format: %s", opts.Format)
 	}
 }
 
-func appendToSpec(opts options.Options, spec *v3.Document, fd protoreflect.FileDescriptor) error {
+func appendToSpec(opts options.Options, spec *v3.Document, fd protoreflect.FileDescriptor) (gErr error) {
 	gnostic.SpecWithFileAnnotations(spec, fd)
 	components, err := fileToComponents(opts, fd)
-	if err != nil {
-		return err
+	if errcheck.Check(&gErr, err) {
+		return
 	}
 
 	initializeDoc(spec)
@@ -196,8 +193,8 @@ func appendToSpec(opts options.Options, spec *v3.Document, fd protoreflect.FileD
 	appendServiceDocs(opts, spec, fd)
 	util.AppendComponents(spec, components)
 
-	if err := addPathItemsFromFile(opts, fd, spec.Paths); err != nil {
-		return err
+	if errcheck.Check(&gErr, addPathItemsFromFile(opts, fd, spec.Paths)) {
+		return
 	}
 	spec.Tags = append(spec.Tags, fileToTags(opts, fd)...)
 	return nil
@@ -207,6 +204,7 @@ func appendServiceDocs(opts options.Options, spec *v3.Document, fd protoreflect.
 	if !opts.WithServiceDescriptions {
 		return
 	}
+
 	var builder strings.Builder
 	if spec.Info.Description != "" {
 		builder.WriteString(spec.Info.Description)

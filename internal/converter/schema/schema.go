@@ -25,6 +25,7 @@ func MessageToSchema(opts options.Options, tt protoreflect.MessageDescriptor) (s
 		}
 		return wk.ID, wk.Schema
 	}
+
 	title := string(tt.Name())
 	if opts.FullyQualifiedMessageNames {
 		title = string(tt.FullName())
@@ -45,6 +46,7 @@ func MessageToSchema(opts options.Options, tt protoreflect.MessageDescriptor) (s
 		if oneOf := field.ContainingOneof(); oneOf != nil && !oneOf.IsSynthetic() {
 			oneOneGroups[oneOf.FullName()] = append(oneOneGroups[oneOf.FullName()], util.MakeFieldName(opts, field))
 		}
+
 		prop := FieldToSchema(opts, base.CreateSchemaProxy(s), field)
 		if field.HasOptionalKeyword() {
 			nullable := true
@@ -57,12 +59,12 @@ func MessageToSchema(opts options.Options, tt protoreflect.MessageDescriptor) (s
 
 	if len(oneOneGroups) > 0 {
 		// make all of groups
-		groupKeys := []protoreflect.FullName{}
+		var groupKeys []protoreflect.FullName
 		for key := range oneOneGroups {
 			groupKeys = append(groupKeys, key)
 		}
 		slices.Sort(groupKeys)
-		allOfs := []*base.SchemaProxy{}
+		var allOfs []*base.SchemaProxy
 		for _, key := range groupKeys {
 			items := oneOneGroups[key]
 			slices.Sort(items)
@@ -134,6 +136,7 @@ func ScalarFieldToSchema(opts options.Options, parent *base.SchemaProxy, tt prot
 		ParentProxy: parent,
 		Deprecated:  util.IsFieldDeprecated(tt),
 	}
+
 	if !inContainer {
 		s.Title = string(tt.Name())
 		s.Description = util.TypeFieldDescription(opts, tt)

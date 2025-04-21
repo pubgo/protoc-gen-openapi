@@ -70,10 +70,12 @@ func FormatComments(loc protoreflect.SourceLocation) string {
 		builder.WriteString(strings.TrimSpace(loc.LeadingComments))
 		builder.WriteString(" ")
 	}
+
 	if loc.TrailingComments != "" {
 		builder.WriteString(strings.TrimSpace(loc.TrailingComments))
 		builder.WriteString(" ")
 	}
+
 	return strings.TrimSpace(builder.String())
 }
 
@@ -86,25 +88,29 @@ func FormatTypeRef(t string) string {
 }
 
 func IsMethodDeprecated(md protoreflect.MethodDescriptor) *bool {
-	options, ok := md.Options().(*descriptorpb.MethodOptions)
-	if !ok || options == nil {
+	methodOptions, ok := md.Options().(*descriptorpb.MethodOptions)
+	if !ok || methodOptions == nil {
 		return nil
 	}
-	if options.Deprecated == nil {
+
+	if methodOptions.Deprecated == nil {
 		return nil
 	}
-	return options.Deprecated
+
+	return methodOptions.Deprecated
 }
 
 func IsFieldDeprecated(fd protoreflect.FieldDescriptor) *bool {
-	options, ok := fd.Options().(*descriptorpb.FieldOptions)
-	if !ok || options == nil {
+	fieldOptions, ok := fd.Options().(*descriptorpb.FieldOptions)
+	if !ok || fieldOptions == nil {
 		return nil
 	}
-	if options.Deprecated == nil {
+
+	if fieldOptions.Deprecated == nil {
 		return nil
 	}
-	return options.Deprecated
+
+	return fieldOptions.Deprecated
 }
 
 func MethodToRequestBody(opts options.Options, method protoreflect.MethodDescriptor, s *base.SchemaProxy, isStreaming bool) *v3.RequestBody {

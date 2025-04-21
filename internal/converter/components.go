@@ -100,6 +100,7 @@ func fileToComponents(opts options.Options, fd protoreflect.FileDescriptor) (*hi
 			Description: "Define the timeout, in ms",
 			Type:        []string{"number"},
 		}))
+
 		connectErrorProps := orderedmap.New[string, *base.SchemaProxy]()
 		connectErrorProps.Set("code", base.CreateSchemaProxy(&base.Schema{
 			Description: "The status code, which should be an enum value of [google.rpc.Code][google.rpc.Code].",
