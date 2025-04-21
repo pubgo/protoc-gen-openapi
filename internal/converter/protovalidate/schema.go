@@ -178,18 +178,18 @@ func updateSchemaDouble(schema *base.Schema, constraint *validate.DoubleRules) {
 	}
 	switch tt := constraint.LessThan.(type) {
 	case *validate.DoubleRules_Lt:
-		v := float64(tt.Lt)
+		v := tt.Lt
 		schema.ExclusiveMaximum = &base.DynamicValue[bool, float64]{N: 1, B: v}
 	case *validate.DoubleRules_Lte:
-		v := float64(tt.Lte)
+		v := tt.Lte
 		schema.Maximum = &v
 	}
 	switch tt := constraint.GreaterThan.(type) {
 	case *validate.DoubleRules_Gt:
-		v := float64(tt.Gt)
+		v := tt.Gt
 		schema.ExclusiveMinimum = &base.DynamicValue[bool, float64]{N: 1, B: v}
 	case *validate.DoubleRules_Gte:
-		v := float64(tt.Gte)
+		v := tt.Gte
 		schema.Minimum = &v
 	}
 	if len(constraint.In) > 0 {

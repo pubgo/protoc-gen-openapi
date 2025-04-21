@@ -348,6 +348,6 @@ func methodHasGet(opts options.Options, method protoreflect.MethodDescriptor) bo
 		return false
 	}
 
-	options := method.Options().(*descriptorpb.MethodOptions)
-	return options.GetIdempotencyLevel() == descriptorpb.MethodOptions_NO_SIDE_EFFECTS
+	methodOptions := method.Options().(*descriptorpb.MethodOptions)
+	return methodOptions.GetIdempotencyLevel() == descriptorpb.MethodOptions_NO_SIDE_EFFECTS
 }

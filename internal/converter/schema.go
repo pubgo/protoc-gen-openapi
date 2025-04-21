@@ -164,14 +164,14 @@ func stateToSchema(st *State) *orderedmap.Map[string, *base.SchemaProxy] {
 	schemas := orderedmap.New[string, *base.SchemaProxy]()
 
 	for _, enum := range st.SortedEnums() {
-		id, schema := enumToSchema(st, enum)
-		schemas.Set(id, base.CreateSchemaProxy(schema))
+		id, s := enumToSchema(st, enum)
+		schemas.Set(id, base.CreateSchemaProxy(s))
 	}
 
 	for _, message := range st.SortedMessages() {
-		id, schema := schema.MessageToSchema(st.Opts, message)
-		if schema != nil {
-			schemas.Set(id, base.CreateSchemaProxy(schema))
+		id, s := schema.MessageToSchema(st.Opts, message)
+		if s != nil {
+			schemas.Set(id, base.CreateSchemaProxy(s))
 		}
 	}
 
