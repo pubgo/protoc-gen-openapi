@@ -14,9 +14,7 @@ extend google.protobuf.ServiceOptions {
 
 message Service {
   repeated string tags = 1;
-  ExternalDocs external_docs = 2;
-  repeated ParameterOrReference parameters = 3;
-  repeated SecurityRequirement security = 4;
+  repeated SecurityRequirement securities = 4;
   repeated Server servers = 5;
-  repeated NamedAny specification_extension = 6;
+  repeated NamedAny extensions = 6;
 }

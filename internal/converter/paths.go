@@ -21,6 +21,7 @@ func addPathItemsFromFile(opts options.Options, fd protoreflect.FileDescriptor, 
 			continue
 		}
 
+		srv := googleapi.GetSrvOptions(opts, service)
 		methods := service.Methods()
 		for j := 0; j < methods.Len(); j++ {
 			method := methods.Get(j)
@@ -29,12 +30,21 @@ func addPathItemsFromFile(opts options.Options, fd protoreflect.FileDescriptor, 
 			// Helper function to update or set path items
 			addPathItem := func(path string, newItem *v3.PathItem) {
 				path = util.MakePath(opts, path)
-				if existing, ok := paths.PathItems.Get(path); !ok {
-					paths.PathItems.Set(path, newItem)
-				} else {
-					mergePathItems(existing, newItem)
-					paths.PathItems.Set(path, existing)
+				if existing, ok := paths.PathItems.Get(path); ok {
+					newItem = mergePathItems(existing, newItem)
 				}
+
+				if srv != nil {
+					//	op.Parameters = append(op.Parameters, extService.Parameters...)
+					//			op.SpecificationExtension = append(op.SpecificationExtension, extService.SpecificationExtension...)
+					//			op.Tags = append(op.Tags, extService.Tags...)
+					//			op.Servers = append(op.Servers, extService.Servers...)
+					//			op.Security = append(op.Security, extService.Security...)
+					//			if extService.ExternalDocs != nil {
+					//           proto.Merge(op.ExternalDocs, extService.ExternalDocs)
+					//				}
+				}
+				paths.PathItems.Set(path, newItem)
 			}
 
 			// Update path items from google.api annotations
@@ -54,7 +64,11 @@ func addPathItemsFromFile(opts options.Options, fd protoreflect.FileDescriptor, 
 	return nil
 }
 
-func mergePathItems(existing, new *v3.PathItem) {
+func mergePathItems(existing, new *v3.PathItem) *v3.PathItem {
+	if new == nil {
+		return existing
+	}
+
 	// Merge operations
 	operations := []struct {
 		existingOp **v3.Operation
@@ -94,6 +108,7 @@ func mergePathItems(existing, new *v3.PathItem) {
 			existing.Extensions.Set(pair.Key(), pair.Value())
 		}
 	}
+	return existing
 }
 
 func mergeOperation(existing **v3.Operation, new *v3.Operation) {

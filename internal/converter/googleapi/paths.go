@@ -12,10 +12,29 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
+	"github.com/pubgo/protoc-gen-openapi/generator"
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/options"
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/schema"
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/util"
 )
+
+func GetSrvOptions(opts options.Options, serviceDescriptor protoreflect.ServiceDescriptor) *generator.Service {
+	if opts.IgnoreGoogleApiHTTP {
+		return nil
+	}
+
+	srvOpts := serviceDescriptor.Options()
+	if !proto.HasExtension(srvOpts, generator.E_Service) {
+		return nil
+	}
+
+	srv, ok := proto.GetExtension(srvOpts, generator.E_Service).(*generator.Service)
+	if !ok {
+		return nil
+	}
+
+	return srv
+}
 
 func MakePathItems(opts options.Options, md protoreflect.MethodDescriptor) *orderedmap.Map[string, *v3.PathItem] {
 	if opts.IgnoreGoogleApiHTTP {
