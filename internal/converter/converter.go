@@ -16,6 +16,7 @@ import (
 	"github.com/pb33f/libopenapi/orderedmap"
 	"github.com/pubgo/funk/assert"
 	"github.com/pubgo/funk/recovery"
+	"github.com/samber/lo"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -52,18 +53,12 @@ func Convert(gen *protogen.Plugin, cfg options.Config) (gErr error) {
 		))
 	}
 
-	genFiles := make(map[string]struct{}, len(req.FileToGenerate))
-	for _, file := range req.FileToGenerate {
-		genFiles[file] = struct{}{}
-	}
+	genFiles := lo.SliceToMap(req.FileToGenerate, func(item string) (string, struct{}) { return item, struct{}{} })
 
 	// We need this to resolve dependencies when making protodesc versions of the files
-	resolver, err := protodesc.NewFiles(&descriptorpb.FileDescriptorSet{
+	resolver := assert.Must1(protodesc.NewFiles(&descriptorpb.FileDescriptorSet{
 		File: req.GetProtoFile(),
-	})
-	if err != nil {
-		return err
-	}
+	}))
 
 	newSpec := func() (*v3.Document, error) {
 		model := &v3.Document{}
@@ -76,6 +71,7 @@ func Convert(gen *protogen.Plugin, cfg options.Config) (gErr error) {
 			if err != nil {
 				return &v3.Document{}, fmt.Errorf("unmarshalling base: %w", err)
 			}
+
 			v3Document, errs := document.BuildV3Model()
 			if len(errs) > 0 {
 				var merr error
