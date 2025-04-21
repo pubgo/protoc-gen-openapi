@@ -53,10 +53,12 @@ func httpRuleToPathMap(opts options.Options, md protoreflect.MethodDescriptor, r
 		slog.Warn("invalid type of pattern for HTTP rule", slog.Any("pattern", pattern))
 		return nil
 	}
+
 	if method == "" {
 		slog.Warn("invalid HTTP rule: method is blank", slog.Any("method", md))
 		return nil
 	}
+
 	if template == "" {
 		slog.Warn("invalid HTTP rule: path template is blank", slog.Any("method", md))
 		return nil
