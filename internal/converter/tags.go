@@ -10,7 +10,7 @@ import (
 )
 
 func fileToTags(opts options.Options, fd protoreflect.FileDescriptor) []*base.Tag {
-	tags := []*highbase.Tag{}
+	var tags []*highbase.Tag
 	services := fd.Services()
 	for i := 0; i < services.Len(); i++ {
 		service := services.Get(i)

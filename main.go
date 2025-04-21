@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"log/slog"
 
-	"google.golang.org/protobuf/compiler/protogen"
-	"google.golang.org/protobuf/types/descriptorpb"
-	"google.golang.org/protobuf/types/pluginpb"
-
 	"github.com/pubgo/protoc-gen-openapi/internal/converter"
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/options"
 	_ "github.com/pubgo/protoc-gen-openapi/internal/logging"
 	"github.com/pubgo/protoc-gen-openapi/version"
+	"google.golang.org/protobuf/compiler/protogen"
+	"google.golang.org/protobuf/types/descriptorpb"
+	"google.golang.org/protobuf/types/pluginpb"
 )
 
 var conf = options.Config{
@@ -57,15 +56,20 @@ func main() {
 		return
 	}
 
-	protogen.Options{ParamFunc: func(name, value string) error {
+	var flagSet = func(name, value string) error {
 		err := flag.CommandLine.Set(name, value)
-		slog.Info("flags", name, value, "err", err)
+		if err != nil {
+			slog.Info("openapi flags set error", name, value, "err", err)
+		}
+
 		return nil
-	}}.Run(func(gen *protogen.Plugin) error {
+	}
+	var runPlugin = func(gen *protogen.Plugin) error {
 		gen.SupportedFeatures = uint64(pluginpb.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL | pluginpb.CodeGeneratorResponse_FEATURE_SUPPORTS_EDITIONS)
 		gen.SupportedEditionsMinimum = descriptorpb.Edition_EDITION_PROTO2
 		gen.SupportedEditionsMaximum = descriptorpb.Edition_EDITION_2024
 
 		return converter.Convert(gen, conf)
-	})
+	}
+	protogen.Options{ParamFunc: flagSet}.Run(runPlugin)
 }

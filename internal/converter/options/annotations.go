@@ -14,7 +14,7 @@ type FieldAnnotator interface {
 }
 
 type FieldReferenceAnnotator interface {
-	// Annotate a field reference. This takes in the PARENT of the field, because with references
+	// AnnotateFieldReference Annotate a field reference. This takes in the PARENT of the field, because with references
 	// we can only annotate on the things on the parent like the list of required attributes.
 	AnnotateFieldReference(opts Options, parent *base.Schema, desc protoreflect.FieldDescriptor) *base.Schema
 }

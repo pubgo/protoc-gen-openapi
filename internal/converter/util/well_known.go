@@ -11,7 +11,7 @@ var wellKnownToSchemaFns = map[string]func(protoreflect.MessageDescriptor) *IDSc
 	"google.protobuf.Timestamp": googleTimestamp,
 	"google.protobuf.Empty":     googleEmpty,
 	"google.protobuf.Any":       func(_ protoreflect.MessageDescriptor) *IDSchema { return NewGoogleAny() },
-	"google.protobuf.FieldMask": googleFieldmask,
+	"google.protobuf.FieldMask": googleFieldMask,
 
 	// google.protobuf.[Type]Value
 	"google.protobuf.Struct":      googleStruct,
@@ -199,7 +199,7 @@ func NewGoogleAny() *IDSchema {
 	}
 }
 
-func googleFieldmask(msg protoreflect.MessageDescriptor) *IDSchema {
+func googleFieldMask(msg protoreflect.MessageDescriptor) *IDSchema {
 	return &IDSchema{
 		ID: string(msg.FullName()),
 		Schema: &base.Schema{

@@ -7,9 +7,10 @@ import (
 	"github.com/pb33f/libopenapi/datamodel/high/base"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/orderedmap"
-	"github.com/pubgo/protoc-gen-openapi/internal/converter/options"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
+
+	"github.com/pubgo/protoc-gen-openapi/internal/converter/options"
 )
 
 func AppendComponents(spec *v3.Document, components *v3.Components) {

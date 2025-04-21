@@ -8,10 +8,11 @@ import (
 	"github.com/bufbuild/protovalidate-go/resolve"
 	"github.com/pb33f/libopenapi/datamodel/high/base"
 	"github.com/pb33f/libopenapi/utils"
-	"github.com/pubgo/protoc-gen-openapi/internal/converter/options"
-	"github.com/pubgo/protoc-gen-openapi/internal/converter/util"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"gopkg.in/yaml.v3"
+
+	"github.com/pubgo/protoc-gen-openapi/internal/converter/options"
+	"github.com/pubgo/protoc-gen-openapi/internal/converter/util"
 )
 
 func SchemaWithMessageAnnotations(opts options.Options, schema *base.Schema, desc protoreflect.MessageDescriptor) *base.Schema {

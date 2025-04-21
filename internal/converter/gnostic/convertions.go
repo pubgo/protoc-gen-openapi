@@ -9,9 +9,10 @@ import (
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/orderedmap"
 	"github.com/pb33f/libopenapi/utils"
+	"gopkg.in/yaml.v3"
+
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/options"
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/util"
-	"gopkg.in/yaml.v3"
 )
 
 func toServers(servers []*goa3.Server) []*v3.Server {
