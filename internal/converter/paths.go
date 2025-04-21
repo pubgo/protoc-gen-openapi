@@ -20,6 +20,7 @@ func addPathItemsFromFile(opts options.Options, fd protoreflect.FileDescriptor, 
 		if !opts.HasService(service.FullName()) {
 			continue
 		}
+
 		methods := service.Methods()
 		for j := 0; j < methods.Len(); j++ {
 			method := methods.Get(j)
@@ -79,9 +80,11 @@ func mergePathItems(existing, new *v3.PathItem) {
 	if new.Summary != "" {
 		existing.Summary = new.Summary
 	}
+
 	if new.Description != "" {
 		existing.Description = new.Description
 	}
+
 	existing.Servers = append(existing.Servers, new.Servers...)
 	existing.Parameters = append(existing.Parameters, new.Parameters...)
 
@@ -98,21 +101,26 @@ func mergeOperation(existing **v3.Operation, new *v3.Operation) {
 		*existing = new
 		return
 	}
+
 	// Merge operation fields
 	if new.Summary != "" {
 		(*existing).Summary = new.Summary
 	}
+
 	if new.Description != "" {
 		(*existing).Description = new.Description
 	}
+
 	(*existing).Tags = append((*existing).Tags, new.Tags...)
 	(*existing).Parameters = append((*existing).Parameters, new.Parameters...)
 	if new.RequestBody != nil {
 		(*existing).RequestBody = new.RequestBody
 	}
+
 	if new.Responses != nil {
 		mergeResponses((*existing).Responses, new.Responses)
 	}
+
 	if new.Deprecated != nil {
 		(*existing).Deprecated = new.Deprecated
 	}
@@ -122,6 +130,7 @@ func mergeOperation(existing **v3.Operation, new *v3.Operation) {
 		if (*existing).Callbacks == nil {
 			(*existing).Callbacks = orderedmap.New[string, *v3.Callback]()
 		}
+
 		for pair := new.Callbacks.First(); pair != nil; pair = pair.Next() {
 			if _, ok := (*existing).Callbacks.Get(pair.Key()); !ok {
 				(*existing).Callbacks.Set(pair.Key(), pair.Value())
@@ -220,7 +229,7 @@ func mergeResponse(existing, new *v3.Response) {
 	}
 }
 
-func methodToOperaton(opts options.Options, method protoreflect.MethodDescriptor, returnGet bool) *v3.Operation {
+func methodToOperation(opts options.Options, method protoreflect.MethodDescriptor, returnGet bool) *v3.Operation {
 	fd := method.ParentFile()
 	service := method.Parent().(protoreflect.ServiceDescriptor)
 	loc := fd.SourceLocations().ByDescriptor(method)
@@ -331,9 +340,9 @@ func methodToPathItem(opts options.Options, method protoreflect.MethodDescriptor
 	hasGetSupport := methodHasGet(opts, method)
 	item := &v3.PathItem{}
 	if hasGetSupport {
-		item.Get = methodToOperaton(opts, method, true)
+		item.Get = methodToOperation(opts, method, true)
 	}
-	item.Post = methodToOperaton(opts, method, false)
+	item.Post = methodToOperation(opts, method, false)
 	item = gnostic.PathItemWithMethodAnnotations(item, method)
 
 	return item

@@ -150,11 +150,11 @@ func MakePath(opts options.Options, main string) string {
 	return path.Join(opts.PathPrefix, main)
 }
 
-func AppendStringDedupe(strs []string, str string) []string {
-	for _, s := range strs {
+func AppendStringDedupe(strList []string, str string) []string {
+	for _, s := range strList {
 		if str == s {
-			return strs
+			return strList
 		}
 	}
-	return append(strs, str)
+	return append(strList, str)
 }

@@ -44,7 +44,7 @@ func (c Config) ToOptions() (Options, error) {
 	opts.TrimUnusedTypes = lo.FromPtr(c.TrimUnusedTypesFlag)
 	opts.FullyQualifiedMessageNames = lo.FromPtr(c.FullyQualifiedMessageNamesFlag)
 	opts.WithServiceDescriptions = lo.FromPtr(c.WithServiceDescriptions)
-	opts.IgnoreGoogleapiHTTP = lo.FromPtr(c.IgnoreGoogleApiHttpFlag)
+	opts.IgnoreGoogleApiHTTP = lo.FromPtr(c.IgnoreGoogleApiHttpFlag)
 	opts.Path = lo.FromPtr(c.PathFlag)
 	opts.PathPrefix = lo.FromPtr(c.PathPrefixFlag)
 	opts.Format = lo.FromPtr(c.FormatFlag)
@@ -77,9 +77,10 @@ func (c Config) ToOptions() (Options, error) {
 		return nil
 	})
 
-	opts.Services = lo.Uniq(lo.Map(strings.Split(lo.FromPtr(c.ServicesFlag), ","), func(item string, index int) protoreflect.FullName {
+	opts.Services = lo.Map(strings.Split(lo.FromPtr(c.ServicesFlag), ","), func(item string, index int) protoreflect.FullName {
 		return protoreflect.FullName(strings.TrimSpace(item))
-	}))
+	})
+	opts.Services = lo.Filter(lo.Uniq(opts.Services), func(item protoreflect.FullName, index int) bool { return string(item) != "" })
 
 	return opts, nil
 }
@@ -128,8 +129,8 @@ type Options struct {
 	// WithServiceDescriptions set to true will cause service names and their comments to be added to the end of info.description.
 	WithServiceDescriptions bool
 
-	// IgnoreGoogleapiHTTP set to true will cause service to always generate OpenAPI specs for connect endpoints, and ignore any google.api.http options.
-	IgnoreGoogleapiHTTP bool
+	// IgnoreGoogleApiHTTP set to true will cause service to always generate OpenAPI specs for connect endpoints, and ignore any google.api.http options.
+	IgnoreGoogleApiHTTP bool
 
 	// Services filters which services will be used for generating OpenAPI spec.
 	Services []protoreflect.FullName
