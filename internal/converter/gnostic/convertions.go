@@ -72,6 +72,7 @@ func appendComponents(spec *highv3.Document, c *goa3.Components) {
 	if c == nil {
 		return
 	}
+
 	util.AppendComponents(spec, &v3.Components{
 		Schemas:         toSchemaOrReferenceMap(c.Schemas.GetAdditionalProperties()),
 		SecuritySchemes: toSecuritySchemes(c.SecuritySchemes),
@@ -102,21 +103,21 @@ func toRequestBodiesMap(bodies *goa3.RequestBodiesOrReferences) *orderedmap.Map[
 	return m
 }
 
-func toRequestBody(rbody *goa3.RequestBody) *v3.RequestBody {
+func toRequestBody(body *goa3.RequestBody) *v3.RequestBody {
 	return &v3.RequestBody{
-		Description: rbody.Description,
-		Content:     toMediaTypes(rbody.GetContent()),
-		Required:    &rbody.Required,
-		Extensions:  toExtensions(rbody.SpecificationExtension),
+		Description: body.Description,
+		Content:     toMediaTypes(body.GetContent()),
+		Required:    &body.Required,
+		Extensions:  toExtensions(body.SpecificationExtension),
 	}
 }
 
-func toResponsesMap(resps *goa3.ResponsesOrReferences) *orderedmap.Map[string, *v3.Response] {
-	if resps == nil {
+func toResponsesMap(resp *goa3.ResponsesOrReferences) *orderedmap.Map[string, *v3.Response] {
+	if resp == nil {
 		return nil
 	}
 	m := orderedmap.New[string, *v3.Response]()
-	for _, resp := range resps.GetAdditionalProperties() {
+	for _, resp := range resp.GetAdditionalProperties() {
 		m.Set(resp.Name, toResponse(resp.Value))
 	}
 	return m

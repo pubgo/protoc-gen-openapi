@@ -18,6 +18,7 @@ func SpecWithFileAnnotations(spec *highv3.Document, fd protoreflect.FileDescript
 	if !ok {
 		return
 	}
+
 	if opts.Openapi != "" {
 		spec.Info.Version = opts.Openapi
 	}

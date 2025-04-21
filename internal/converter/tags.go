@@ -17,6 +17,7 @@ func fileToTags(opts options.Options, fd protoreflect.FileDescriptor) []*base.Ta
 		if !opts.HasService(service.FullName()) {
 			continue
 		}
+
 		loc := fd.SourceLocations().ByDescriptor(service)
 		description := util.FormatComments(loc)
 

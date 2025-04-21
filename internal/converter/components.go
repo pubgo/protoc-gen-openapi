@@ -86,6 +86,7 @@ func fileToComponents(opts options.Options, fd protoreflect.FileDescriptor) (*hi
 			},
 		}))
 	}
+
 	if hasMethods {
 		components.Schemas.Set("connect-protocol-version", base.CreateSchemaProxy(&base.Schema{
 			Title:       "Connect-Protocol-Version",

@@ -128,8 +128,8 @@ func Convert(gen *protogen.Plugin, cfg options.Config) (gErr error) {
 		outFiles[opts.Path] = spec
 	}
 
-	for path, spec := range outFiles {
-		content := assert.Must1(specToFile(opts, spec))
+	for path, doc := range outFiles {
+		content := assert.Must1(specToFile(opts, doc))
 
 		gg := gen.NewGeneratedFile(path, "")
 		assert.Must1(gg.Write([]byte(content)))
@@ -210,6 +210,7 @@ func appendServiceDocs(opts options.Options, spec *v3.Document, fd protoreflect.
 		builder.WriteString(spec.Info.Description)
 		builder.WriteString("\n\n")
 	}
+
 	services := fd.Services()
 	for i := 0; i < services.Len(); i++ {
 		service := services.Get(i)
