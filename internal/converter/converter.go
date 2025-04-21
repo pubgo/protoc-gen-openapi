@@ -14,7 +14,8 @@ import (
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/index"
 	"github.com/pb33f/libopenapi/orderedmap"
-	"github.com/samber/lo"
+	"github.com/pubgo/funk/assert"
+	"github.com/pubgo/funk/recovery"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -26,11 +27,10 @@ import (
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/util"
 )
 
-func Convert(gen *protogen.Plugin, cfg options.Config) error {
-	opts, err := cfg.ToOptions()
-	if err != nil {
-		return err
-	}
+func Convert(gen *protogen.Plugin, cfg options.Config) (gErr error) {
+	defer recovery.Err(&gErr)
+
+	opts := assert.Must1(cfg.ToOptions())
 
 	var req = gen.Request
 	annotator := &annotator{}
@@ -90,12 +90,9 @@ func Convert(gen *protogen.Plugin, cfg options.Config) error {
 		}
 	}
 
-	spec, err := newSpec()
-	if err != nil {
-		return err
-	}
-	outFiles := map[string]*v3.Document{}
+	spec := assert.Must1(newSpec())
 
+	outFiles := map[string]*v3.Document{}
 	for _, fileDesc := range req.GetProtoFile() {
 		if _, ok := genFiles[fileDesc.GetName()]; !ok {
 			continue
@@ -119,9 +116,7 @@ func Convert(gen *protogen.Plugin, cfg options.Config) error {
 			spec.Info.Description = util.FormatComments(fd.SourceLocations().ByDescriptor(fd))
 		}
 
-		if err := appendToSpec(opts, spec, fd); err != nil {
-			return err
-		}
+		assert.Must(appendToSpec(opts, spec, fd))
 
 		if opts.Path == "" {
 			name := fileDesc.GetName()
@@ -137,13 +132,10 @@ func Convert(gen *protogen.Plugin, cfg options.Config) error {
 	}
 
 	for path, spec := range outFiles {
-		content, err := specToFile(opts, spec)
-		if err != nil {
-			return err
-		}
+		content := assert.Must1(specToFile(opts, spec))
 
 		gg := gen.NewGeneratedFile(path, "")
-		lo.Must(gg.Write([]byte(content)))
+		assert.Must1(gg.Write([]byte(content)))
 	}
 
 	return nil

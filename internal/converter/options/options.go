@@ -6,6 +6,8 @@ import (
 	"path"
 	"strings"
 
+	"github.com/pubgo/funk"
+	"github.com/pubgo/funk/assert"
 	"github.com/samber/lo"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -50,42 +52,35 @@ func (c Config) ToOptions() (Options, error) {
 		return opts, fmt.Errorf("format be yaml or json, not '%s'", opts.Format)
 	}
 
-	contentTypes := map[string]struct{}{}
-	supportedProtocols := map[string]struct{}{}
-	for _, proto := range Protocols {
-		supportedProtocols[proto.Name] = struct{}{}
-	}
-	for _, contentType := range strings.Split(lo.FromPtr(c.ContentTypesFlag), ";") {
+	supportedProtocolMap := lo.SliceToMap(Protocols, func(proto Protocol) (string, Protocol) { return proto.Name, proto })
+	opts.ContentTypes = lo.SliceToMap(strings.Split(lo.FromPtr(c.ContentTypesFlag), ";"), func(contentType string) (string, struct{}) {
 		contentType = strings.TrimSpace(contentType)
-		_, isSupportedProtocol := supportedProtocols[contentType]
+		_, isSupportedProtocol := supportedProtocolMap[contentType]
 		if !isSupportedProtocol {
-			return opts, fmt.Errorf("invalid content type: '%s'", contentType)
+			panic(fmt.Errorf("invalid content type: '%s'", contentType))
 		}
-		contentTypes[contentType] = struct{}{}
-	}
+		return contentType, struct{}{}
+	})
 
-	basePath := lo.FromPtr(c.BaseFlag)
-	if basePath != "" {
-		ext := path.Ext(basePath)
-		switch ext {
-		case ".yaml", ".yml", ".json":
-			body, err := os.ReadFile(basePath)
-			if err != nil {
-				return opts, err
-			}
-			opts.BaseOpenAPI = body
-		default:
-			return opts, fmt.Errorf("the file extension for 'base' should end with yaml or json, not '%s'", ext)
+	opts.BaseOpenAPI = funk.DoFunc(func() []byte {
+		basePath := lo.FromPtr(c.BaseFlag)
+		if basePath == "" {
+			return nil
 		}
-	}
 
-	for _, service := range strings.Split(lo.FromPtr(c.ServicesFlag), ",") {
-		opts.Services = append(opts.Services, protoreflect.FullName(service))
-	}
+		ext := strings.TrimSpace(path.Ext(basePath))
+		if lo.Contains([]string{".yaml", ".yml", ".json"}, ext) {
+			return assert.Must1(os.ReadFile(basePath))
+		}
 
-	if len(contentTypes) > 0 {
-		opts.ContentTypes = contentTypes
-	}
+		assert.Must(fmt.Errorf("the file extension for 'base' should end with yaml or json, not '%s'", ext))
+		return nil
+	})
+
+	opts.Services = lo.Uniq(lo.Map(strings.Split(lo.FromPtr(c.ServicesFlag), ","), func(item string, index int) protoreflect.FullName {
+		return protoreflect.FullName(strings.TrimSpace(item))
+	}))
+
 	return opts, nil
 }
 
@@ -148,6 +143,7 @@ func (opts Options) HasService(serviceName protoreflect.FullName) bool {
 	if len(opts.Services) == 0 {
 		return true
 	}
+
 	for _, service := range opts.Services {
 		if service == serviceName {
 			return true
