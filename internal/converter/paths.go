@@ -35,7 +35,6 @@ func addPathItemsFromFile(opts options.Options, fd protoreflect.FileDescriptor, 
 				}
 
 				if srv != nil {
-					//	op.Parameters = append(op.Parameters, extService.Parameters...)
 					//			op.SpecificationExtension = append(op.SpecificationExtension, extService.SpecificationExtension...)
 					//			op.Tags = append(op.Tags, extService.Tags...)
 					//			op.Servers = append(op.Servers, extService.Servers...)

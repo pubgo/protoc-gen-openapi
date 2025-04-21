@@ -25,7 +25,7 @@ import "openapiv3/service.proto";
 option go_package = "github.com/google/gnostic/apps/protoc-gen-openapi/examples/tests/rpctypes/message/v1;message";
 
 service Status {
-  option(openapi.v3.service).specification_extension={
+  option(openapi.v3.service).extensions={
     name: "x-folder"
     value: {
       yaml: "api/test"
