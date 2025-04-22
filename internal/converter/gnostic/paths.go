@@ -50,10 +50,10 @@ func PathItemWithMethodAnnotations(item *v3.PathItem, md protoreflect.MethodDesc
 			oper.Callbacks = toCallbacks(opts.Callbacks)
 		}
 
-		if security := toSecurityRequirements(opts.Security); len(security) > 0 {
+		if security := ToSecurityRequirements(opts.Security); len(security) > 0 {
 			oper.Security = security
 		}
-		oper.Servers = toServers(opts.Servers)
+		oper.Servers = ToServers(opts.Servers)
 
 		if opts.Summary != "" {
 			oper.Summary = opts.Summary
@@ -72,7 +72,7 @@ func PathItemWithMethodAnnotations(item *v3.PathItem, md protoreflect.MethodDesc
 		}
 
 		if opts.SpecificationExtension != nil {
-			oper.Extensions = toExtensions(opts.GetSpecificationExtension())
+			oper.Extensions = ToExtensions(opts.GetSpecificationExtension())
 		}
 	}
 	return item

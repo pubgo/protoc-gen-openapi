@@ -4,9 +4,12 @@ import (
 	"github.com/pb33f/libopenapi/datamodel/high/base"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/orderedmap"
+	"github.com/samber/lo"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
+	"gopkg.in/yaml.v3"
 
+	"github.com/pubgo/protoc-gen-openapi/generator"
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/gnostic"
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/googleapi"
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/options"
@@ -34,15 +37,14 @@ func addPathItemsFromFile(opts options.Options, fd protoreflect.FileDescriptor, 
 					newItem = mergePathItems(existing, newItem)
 				}
 
-				if srv != nil {
-					//			op.SpecificationExtension = append(op.SpecificationExtension, extService.SpecificationExtension...)
-					//			op.Tags = append(op.Tags, extService.Tags...)
-					//			op.Servers = append(op.Servers, extService.Servers...)
-					//			op.Security = append(op.Security, extService.Security...)
-					//			if extService.ExternalDocs != nil {
-					//           proto.Merge(op.ExternalDocs, extService.ExternalDocs)
-					//				}
-				}
+				mergeOperationV2(newItem.Get, srv)
+				mergeOperationV2(newItem.Put, srv)
+				mergeOperationV2(newItem.Post, srv)
+				mergeOperationV2(newItem.Delete, srv)
+				mergeOperationV2(newItem.Options, srv)
+				mergeOperationV2(newItem.Head, srv)
+				mergeOperationV2(newItem.Patch, srv)
+				mergeOperationV2(newItem.Trace, srv)
 				paths.PathItems.Set(path, newItem)
 			}
 
@@ -108,6 +110,29 @@ func mergePathItems(existing, new *v3.PathItem) *v3.PathItem {
 		}
 	}
 	return existing
+}
+
+func mergeOperationV2(existing *v3.Operation, srv *generator.Service) {
+	if srv == nil || existing == nil {
+		return
+	}
+
+	existing.Tags = lo.Uniq(append(existing.Tags, srv.Tags...))
+	existing.Security = append(existing.Security, gnostic.ToSecurityRequirements(srv.Securities)...)
+	existing.Servers = append(existing.Servers, gnostic.ToServers(srv.Servers)...)
+
+	ext := gnostic.ToExtensions(srv.Extensions)
+	if ext == nil {
+		ext = orderedmap.New[string, *yaml.Node]()
+	}
+
+	if existing.Extensions == nil {
+		existing.Extensions = ext
+	}
+
+	for pair := ext.First(); pair != nil; pair = pair.Next() {
+		existing.Extensions.Set(pair.Key(), pair.Value())
+	}
 }
 
 func mergeOperation(existing **v3.Operation, new *v3.Operation) {
