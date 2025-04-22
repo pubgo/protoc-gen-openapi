@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"log/slog"
 
+	"google.golang.org/protobuf/compiler/protogen"
+	"google.golang.org/protobuf/types/descriptorpb"
+	"google.golang.org/protobuf/types/pluginpb"
+
 	"github.com/pubgo/protoc-gen-openapi/internal/converter"
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/options"
 	_ "github.com/pubgo/protoc-gen-openapi/internal/logging"
 	"github.com/pubgo/protoc-gen-openapi/version"
-	"google.golang.org/protobuf/compiler/protogen"
-	"google.golang.org/protobuf/types/descriptorpb"
-	"google.golang.org/protobuf/types/pluginpb"
 )
 
 var conf = options.Config{
