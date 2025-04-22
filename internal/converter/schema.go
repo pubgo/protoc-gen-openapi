@@ -1,9 +1,11 @@
 package converter
 
 import (
+	"fmt"
 	"log/slog"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/pb33f/libopenapi/datamodel/high/base"
 	"github.com/pb33f/libopenapi/orderedmap"
@@ -135,12 +137,24 @@ func (st *State) SortedMessages() []protoreflect.MessageDescriptor {
 	return messages
 }
 
+func trimComment(comment string) string {
+	return strings.TrimSpace(strings.Trim(strings.TrimSpace(comment), "/"))
+}
+
 func enumToSchema(state *State, tt protoreflect.EnumDescriptor) (string, *base.Schema) {
 	slog.Debug("enumToSchema", slog.Any("descriptor", tt.FullName()))
-	children := []*yaml.Node{}
+	children := make([]*yaml.Node, 0)
 	values := tt.Values()
+	desc := strings.TrimSpace(util.FormatComments(tt.ParentFile().SourceLocations().ByDescriptor(tt)))
 	for i := 0; i < values.Len(); i++ {
 		value := values.Get(i)
+		comment := trimComment(strings.TrimSpace(util.FormatComments(tt.ParentFile().SourceLocations().ByDescriptor(value))))
+		if comment != "" {
+			desc += fmt.Sprintf("- %s: %s\n", value.Name(), comment)
+		} else {
+			desc += fmt.Sprintf("- %s\n", value.Name())
+		}
+
 		children = append(children, utils.CreateStringNode(string(value.Name())))
 		if state.Opts.IncludeNumberEnumValues {
 			children = append(children, utils.CreateIntNode(strconv.FormatInt(int64(value.Number()), 10)))
@@ -152,10 +166,12 @@ func enumToSchema(state *State, tt protoreflect.EnumDescriptor) (string, *base.S
 		title = string(tt.FullName())
 	}
 	s := &base.Schema{
+		Format:      "enum",
 		Title:       title,
-		Description: util.FormatComments(tt.ParentFile().SourceLocations().ByDescriptor(tt)),
+		Description: desc,
 		Type:        []string{"string"},
 		Enum:        children,
+		Default:     children[0],
 	}
 	return string(tt.FullName()), s
 }
