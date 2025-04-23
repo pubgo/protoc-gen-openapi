@@ -29,8 +29,8 @@ import (
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/util"
 )
 
-func Convert(gen *protogen.Plugin, cfg options.Config) (gErr error) {
-	defer recovery.Err(&gErr)
+func Convert(gen *protogen.Plugin, cfg options.Config) error {
+	defer recovery.Exit()
 
 	opts := assert.Must1(cfg.ToOptions())
 

@@ -4,7 +4,7 @@ package io.swagger.petstore.v2;
 
 import "gnostic/openapi/v3/annotations.proto";
 
-option (gnostic.openapi.v3.document) = {
+option (openapi.v3.document) = {
   tags: [
     // Override description
     {

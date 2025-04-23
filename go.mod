@@ -20,6 +20,7 @@ require (
 require (
 	github.com/alecthomas/repr v0.2.0 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
+	github.com/bufbuild/protovalidate v0.11.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect

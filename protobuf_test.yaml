@@ -1,7 +1,8 @@
-checksum: 408bba623d90fde1570ce79d5e008862bd768015
+checksum: 5db5260814d43a77f717e6308ba54d8f8c802bf1
 vendor: proto-vendor
 base:
   paths: import
+  out: ./examples/openapi
 root:
   - examples
 includes:
@@ -13,12 +14,9 @@ deps:
     version: v0.0.0-20220601021915-4e0282f92e4e
   - name: google/protobuf
     url: /usr/local/include/google/protobuf
+  - name: buf/validate
+    url: github.com/bufbuild/protovalidate
+    path: /proto/protovalidate/buf/validate
+    version: v0.11.0
 plugins:
   - name: openapi
-    opt:
-      - title="openapi examples"
-      - paths=import
-      - enum_type=string
-      - default_response=false
-      - depth=10
-      - output_mode=source_relative

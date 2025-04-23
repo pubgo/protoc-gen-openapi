@@ -8,7 +8,7 @@ package with_specification_extensions.foo;
 
 import "gnostic/openapi/v3/annotations.proto";
 
-option (gnostic.openapi.v3.document) = {
+option (openapi.v3.document) = {
   specification_extension: [
     {
       // https://redocly.com/docs/api-reference-docs/specification-extensions/x-logo
@@ -91,7 +91,7 @@ enum Foo {
 }
 
 message FooRequest {
-  option (gnostic.openapi.v3.schema) = {
+  option (openapi.v3.schema) = {
     additional_properties: {
       schema_or_reference: {
         schema: {
@@ -106,7 +106,7 @@ message FooRequest {
     }
   };
   string bar = 1;
-  Foo foo = 2 [(gnostic.openapi.v3.property) = {
+  Foo foo = 2 [(openapi.v3.property) = {
     specification_extension: {
       // https://redocly.com/docs/api-reference-docs/specification-extensions/x-enum-descriptions
       name: 'x-enumDescriptions'
@@ -116,7 +116,7 @@ message FooRequest {
 }
 
 message FooResponse {
-  option (gnostic.openapi.v3.schema) = {
+  option (openapi.v3.schema) = {
     specification_extension: {
       // https://redocly.com/docs/api-reference-docs/specification-extensions/x-summary
       name: 'x-summary'
@@ -132,7 +132,7 @@ message FooResponse {
 
 service FooService {
   rpc Foo(FooRequest) returns (FooResponse) {
-    option (gnostic.openapi.v3.operation) = {
+    option (openapi.v3.operation) = {
       security: {
         additional_properties: {
           name: "Oauth2"

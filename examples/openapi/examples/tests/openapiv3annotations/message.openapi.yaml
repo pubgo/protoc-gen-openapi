@@ -1,60 +1,31 @@
 openapi: 3.1.0
 info:
-  title: tests.additional_bindings.message.v1
+  title: Title from annotation
+  description: Description from annotation
+  contact:
+    name: Contact Name
+    url: https://github.com/google/gnostic
+    email: gnostic@google.com
+  license:
+    name: Apache License
+    url: https://github.com/google/gnostic/blob/master/LICENSE
+  version: Version from annotation
 paths:
   /v1/messages/{message_id}:
     patch:
       tags:
-        - tests.additional_bindings.message.v1.Messaging
+        - abc=def
+        - tests.openapiv3annotations.message.v1.Messaging1
       summary: UpdateMessage
-      operationId: tests.additional_bindings.message.v1.Messaging.UpdateMessage
-      parameters:
-        - name: message_id
-          in: path
-          required: true
-          schema:
-            type: string
-            title: message_id
+      operationId: tests.openapiv3annotations.message.v1.Messaging1.UpdateMessage
       requestBody:
         content:
           application/json:
             schema:
-              type: string
-              title: text
+              $ref: '#/components/schemas/tests.openapiv3annotations.message.v1.Message'
           application/proto:
             schema:
-              type: string
-              title: text
-      responses:
-        default:
-          description: Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/connect.error'
-            application/proto:
-              schema:
-                $ref: '#/components/schemas/connect.error'
-        "200":
-          description: Success
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/tests.additional_bindings.message.v1.Message'
-  /v1/messages:
-    patch:
-      tags:
-        - tests.additional_bindings.message.v1.Messaging
-      summary: UpdateMessage
-      operationId: tests.additional_bindings.message.v1.Messaging.UpdateMessage
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/tests.additional_bindings.message.v1.Message'
-          application/proto:
-            schema:
-              $ref: '#/components/schemas/tests.additional_bindings.message.v1.Message'
+              $ref: '#/components/schemas/tests.openapiv3annotations.message.v1.Message'
         required: true
       responses:
         default:
@@ -71,19 +42,86 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/tests.additional_bindings.message.v1.Message'
+                $ref: '#/components/schemas/tests.openapiv3annotations.message.v1.Message'
+      security:
+        - BasicAuth: []
+      x-operation-id: updateMessage
+    parameters:
+      - name: Authorization
+        in: header
+        description: jwt token
+        required: true
+        explode: false
+  /tests.openapiv3annotations.message.v1.Messaging2/UpdateMessage:
+    post:
+      tags:
+        - abc=def
+        - tests.openapiv3annotations.message.v1.Messaging2
+      summary: UpdateMessage
+      operationId: tests.openapiv3annotations.message.v1.Messaging2.UpdateMessage
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/tests.openapiv3annotations.message.v1.Message'
+          application/proto:
+            schema:
+              $ref: '#/components/schemas/tests.openapiv3annotations.message.v1.Message'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+            application/proto:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tests.openapiv3annotations.message.v1.Message'
+            application/proto:
+              schema:
+                $ref: '#/components/schemas/tests.openapiv3annotations.message.v1.Message'
+      security:
+        - BasicAuth: []
+      x-operation-id: updateMessage
+    parameters:
+      - name: Authorization
+        in: header
+        description: jwt token
+        required: true
+        explode: false
 components:
   schemas:
-    tests.additional_bindings.message.v1.Message:
+    tests.openapiv3annotations.message.v1.Message:
       type: object
       properties:
-        messageId:
+        id:
+          type:
+            - integer
+            - string
+          title: id
+          format: int64
+        label:
           type: string
-          title: message_id
-        text:
-          type: string
-          title: text
-      title: Message
+          title: this is an overriden field schema title
+          maxLength: 255
+      title: This is an overridden message schema title
       additionalProperties: false
     connect-protocol-version:
       type: number
@@ -142,6 +180,11 @@ components:
           additionalProperties: true
       additionalProperties: true
       description: Contains an arbitrary serialized message along with a @type that describes the type of the serialized message.
+  securitySchemes:
+    BasicAuth:
+      type: http
+      scheme: basic
 security: []
 tags:
-  - name: tests.additional_bindings.message.v1.Messaging
+  - name: tests.openapiv3annotations.message.v1.Messaging1
+  - name: tests.openapiv3annotations.message.v1.Messaging2

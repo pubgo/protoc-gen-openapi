@@ -318,7 +318,7 @@ func ToExtensions(items []*goa3.NamedAny) *orderedmap.Map[string, *yaml.Node] {
 	if items == nil {
 		return nil
 	}
-	
+
 	extensions := orderedmap.New[string, *yaml.Node]()
 	for _, namedAny := range items {
 		extensions.Set(namedAny.Name, namedAny.Value.ToRawInfo())
@@ -560,7 +560,7 @@ func toParameter(paramOrRef *goa3.ParameterOrReference) *v3.Parameter {
 		return nil
 	}
 	param := paramOrRef.GetParameter()
-	return &v3.Parameter{
+	p := &v3.Parameter{
 		Name:            param.GetName(),
 		In:              param.In,
 		Description:     param.Description,
@@ -571,8 +571,11 @@ func toParameter(paramOrRef *goa3.ParameterOrReference) *v3.Parameter {
 		Explode:         &param.Explode,
 		AllowReserved:   param.AllowReserved,
 		Schema:          toSchemaOrReference(param.GetSchema()),
-		Example:         param.Example.ToRawInfo(),
 		Content:         toMediaTypes(param.GetContent()),
 		Extensions:      ToExtensions(param.GetSpecificationExtension()),
 	}
+	if param.Example != nil {
+		p.Example = param.Example.ToRawInfo()
+	}
+	return p
 }

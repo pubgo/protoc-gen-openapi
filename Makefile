@@ -18,6 +18,10 @@ protobuf:
 	mv github.com/pubgo/protoc-gen-openapi/generator generator
 	rm -rf github.com
 
+protobuf-test:
+	protobuild vendor -c protobuf_test.yaml
+	protobuild gen -c protobuf_test.yaml
+
 ALL: generate test install
 PHONY: test install buf-generate
 

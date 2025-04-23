@@ -1,41 +1,21 @@
 openapi: 3.1.0
 info:
-  title: tests.enumoptions.message.v1
+  title: tests.noannotations.message.v1
 paths:
   /v1/messages/{message_id}:
-    post:
+    patch:
       tags:
-        - tests.enumoptions.message.v1.Messaging
-      summary: CreateMessage
-      operationId: tests.enumoptions.message.v1.Messaging.CreateMessage
-      parameters:
-        - name: message_id
-          in: path
-          required: true
-          schema:
-            type: integer
-            title: message_id
-            format: int32
+        - tests.noannotations.message.v1.Messaging1
+      summary: UpdateMessage
+      operationId: tests.noannotations.message.v1.Messaging1.UpdateMessage
       requestBody:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                kind:
-                  title: kind
-                  $ref: '#/components/schemas/tests.enumoptions.message.v1.Kind'
-              title: Message
-              additionalProperties: false
+              $ref: '#/components/schemas/tests.noannotations.message.v1.Message'
           application/proto:
             schema:
-              type: object
-              properties:
-                kind:
-                  title: kind
-                  $ref: '#/components/schemas/tests.enumoptions.message.v1.Kind'
-              title: Message
-              additionalProperties: false
+              $ref: '#/components/schemas/tests.noannotations.message.v1.Message'
         required: true
       responses:
         default:
@@ -52,32 +32,65 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/tests.enumoptions.message.v1.Message'
+                $ref: '#/components/schemas/tests.noannotations.message.v1.Message'
+  /tests.noannotations.message.v1.Messaging2/UpdateMessage:
+    post:
+      tags:
+        - tests.noannotations.message.v1.Messaging2
+      summary: UpdateMessage
+      operationId: tests.noannotations.message.v1.Messaging2.UpdateMessage
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/tests.noannotations.message.v1.Message'
+          application/proto:
+            schema:
+              $ref: '#/components/schemas/tests.noannotations.message.v1.Message'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+            application/proto:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tests.noannotations.message.v1.Message'
+            application/proto:
+              schema:
+                $ref: '#/components/schemas/tests.noannotations.message.v1.Message'
 components:
   schemas:
-    tests.enumoptions.message.v1.Kind:
-      type: string
-      title: Kind
-      format: enum
-      enum:
-        - UNKNOWN_KIND
-        - KIND_1
-        - KIND_2
-      description: |
-        - UNKNOWN_KIND: 未知
-        - KIND_1: 第一个
-        - KIND_2: 第二个
-      default: UNKNOWN_KIND
-    tests.enumoptions.message.v1.Message:
+    tests.noannotations.message.v1.Message:
       type: object
       properties:
-        kind:
-          title: kind
-          $ref: '#/components/schemas/tests.enumoptions.message.v1.Kind'
-        messageId:
-          type: integer
-          title: message_id
-          format: int32
+        id:
+          type:
+            - integer
+            - string
+          title: id
+          format: int64
+        label:
+          type: string
+          title: label
       title: Message
       additionalProperties: false
     connect-protocol-version:
@@ -139,5 +152,5 @@ components:
       description: Contains an arbitrary serialized message along with a @type that describes the type of the serialized message.
 security: []
 tags:
-  - name: tests.enumoptions.message.v1.Messaging
-    description: Messaging service
+  - name: tests.noannotations.message.v1.Messaging1
+  - name: tests.noannotations.message.v1.Messaging2

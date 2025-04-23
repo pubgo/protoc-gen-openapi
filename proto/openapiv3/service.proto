@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package openapi.v3;
 
-import "openapiv3/OpenAPIv3.proto";
+import "openapiv3/openapi.proto";
 import "google/protobuf/descriptor.proto";
 
 // The Go package name.
