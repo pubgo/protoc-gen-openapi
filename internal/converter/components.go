@@ -96,7 +96,7 @@ func fileToComponents(opts options.Options, fd protoreflect.FileDescriptor) (*hi
 			Const:       utils.CreateIntNode("1"),
 		}))
 
-		components.Schemas.Set("Lava-timeout-header", base.CreateSchemaProxy(&base.Schema{
+		components.Schemas.Set("lava-timeout-header", base.CreateSchemaProxy(&base.Schema{
 			Title:       "Lava-Timeout-Ms",
 			Description: "Define the timeout, in ms",
 			Type:        []string{"number"},

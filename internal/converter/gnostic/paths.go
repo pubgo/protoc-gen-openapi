@@ -17,6 +17,7 @@ func PathItemWithMethodAnnotations(item *v3.PathItem, md protoreflect.MethodDesc
 	if !ok {
 		return item
 	}
+	
 	operations := item.GetOperations()
 	for kv := operations.First(); kv != nil; kv = kv.Next() {
 		oper := kv.Value()

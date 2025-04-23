@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"sort"
 	"strconv"
-	"strings"
 
 	"github.com/pb33f/libopenapi/datamodel/high/base"
 	"github.com/pb33f/libopenapi/orderedmap"
@@ -137,18 +136,14 @@ func (st *State) SortedMessages() []protoreflect.MessageDescriptor {
 	return messages
 }
 
-func trimComment(comment string) string {
-	return strings.TrimSpace(strings.Trim(strings.TrimSpace(comment), "/"))
-}
-
 func enumToSchema(state *State, tt protoreflect.EnumDescriptor) (string, *base.Schema) {
 	slog.Debug("enumToSchema", slog.Any("descriptor", tt.FullName()))
 	children := make([]*yaml.Node, 0)
 	values := tt.Values()
-	desc := strings.TrimSpace(util.FormatComments(tt.ParentFile().SourceLocations().ByDescriptor(tt)))
+	desc := util.FormatComments(tt.ParentFile().SourceLocations().ByDescriptor(tt))
 	for i := 0; i < values.Len(); i++ {
 		value := values.Get(i)
-		comment := trimComment(strings.TrimSpace(util.FormatComments(tt.ParentFile().SourceLocations().ByDescriptor(value))))
+		comment := util.FormatComments(tt.ParentFile().SourceLocations().ByDescriptor(value))
 		if comment != "" {
 			desc += fmt.Sprintf("- %s: %s\n", value.Name(), comment)
 		} else {

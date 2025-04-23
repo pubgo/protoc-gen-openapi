@@ -262,6 +262,7 @@ func toSchemaOrReference(s *goa3.SchemaOrReference) *base.SchemaProxy {
 	if s == nil {
 		return nil
 	}
+
 	if ref := s.GetReference(); ref != nil {
 		return base.CreateSchemaProxyRef(ref.XRef)
 	} else if schema := s.GetSchema(); schema != nil {
@@ -282,6 +283,7 @@ func toSchema(s *goa3.Schema) *base.Schema {
 	if s == nil {
 		return nil
 	}
+
 	return schemaWithAnnotations(&base.Schema{}, s)
 }
 
@@ -289,6 +291,7 @@ func toDefault(dt *goa3.DefaultType) *yaml.Node {
 	if dt == nil {
 		return nil
 	}
+
 	switch dt.GetOneof().(type) {
 	case *goa3.DefaultType_Number:
 		return utils.CreateStringNode(strconv.FormatFloat(dt.GetNumber(), 'f', -1, 64))
@@ -365,6 +368,7 @@ func toMediaTypes(items *goa3.MediaTypes) *orderedmap.Map[string, *v3.MediaType]
 	if items == nil {
 		return nil
 	}
+
 	content := orderedmap.New[string, *v3.MediaType]()
 	for _, item := range items.GetAdditionalProperties() {
 		mt := &v3.MediaType{

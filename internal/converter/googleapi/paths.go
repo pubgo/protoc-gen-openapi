@@ -50,6 +50,7 @@ func MakePathItems(opts options.Options, md protoreflect.MethodDescriptor) *orde
 	if !ok {
 		return nil
 	}
+
 	return httpRuleToPathMap(opts, md, rule)
 }
 
@@ -97,7 +98,7 @@ func httpRuleToPathMap(opts options.Options, md protoreflect.MethodDescriptor, r
 	op := &v3.Operation{
 		Summary:     string(md.Name()),
 		OperationId: string(md.FullName()),
-		Tags:        []string{string(service.FullName())},
+		Tags:        []string{strings.ReplaceAll(string(service.FullName()), ".", "/")},
 		Description: util.FormatComments(fd.SourceLocations().ByDescriptor(md)),
 	}
 

@@ -35,6 +35,7 @@ func SchemaWithPropertyAnnotations(schema *base.Schema, desc protoreflect.FieldD
 	if !ok {
 		return schema
 	}
+
 	return schemaWithAnnotations(schema, opts)
 }
 
@@ -211,6 +212,7 @@ func schemaWithAnnotations(schema *base.Schema, opts *goa3.Schema) *base.Schema 
 		for _, prop := range opts.Discriminator.GetMapping().GetAdditionalProperties() {
 			mapping.Set(prop.Name, prop.Value)
 		}
+
 		schema.Discriminator = &base.Discriminator{
 			PropertyName: opts.Discriminator.GetPropertyName(),
 			Mapping:      mapping,
@@ -219,6 +221,6 @@ func schemaWithAnnotations(schema *base.Schema, opts *goa3.Schema) *base.Schema 
 	if opts.SpecificationExtension != nil {
 		schema.Extensions = ToExtensions(opts.SpecificationExtension)
 	}
-
+	
 	return schema
 }

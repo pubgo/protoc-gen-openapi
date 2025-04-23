@@ -64,6 +64,10 @@ func TypeFieldDescription(opts options.Options, tt protoreflect.FieldDescriptor)
 	return b.String()
 }
 
+func trimComment(comment string) string {
+	return strings.TrimSpace(strings.Trim(strings.TrimSpace(comment), "/"))
+}
+
 func FormatComments(loc protoreflect.SourceLocation) string {
 	var builder strings.Builder
 	if loc.LeadingComments != "" {
@@ -76,7 +80,7 @@ func FormatComments(loc protoreflect.SourceLocation) string {
 		builder.WriteString(" ")
 	}
 
-	return strings.TrimSpace(builder.String())
+	return trimComment(strings.TrimSpace(builder.String()))
 }
 
 func BoolPtr(b bool) *bool {

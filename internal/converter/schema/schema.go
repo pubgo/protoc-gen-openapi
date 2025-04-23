@@ -49,10 +49,21 @@ func MessageToSchema(opts options.Options, tt protoreflect.MessageDescriptor) (s
 
 		prop := FieldToSchema(opts, base.CreateSchemaProxy(s), field)
 		if field.HasOptionalKeyword() {
-			nullable := true
-			prop.Schema().Nullable = &nullable
+			schema := prop.Schema()
+			props.Set(util.MakeFieldName(opts, field), base.CreateSchemaProxy(&base.Schema{
+				Type:        schema.Type,
+				Title:       schema.Title,
+				Description: schema.Description,
+				Deprecated:  schema.Deprecated,
+				Examples:    schema.Examples,
+				OneOf: []*base.SchemaProxy{
+					prop,
+					base.CreateSchemaProxy(&base.Schema{Type: []string{"null"}}),
+				},
+			}))
+		} else {
+			props.Set(util.MakeFieldName(opts, field), prop)
 		}
-		props.Set(util.MakeFieldName(opts, field), prop)
 	}
 
 	s.Properties = props
