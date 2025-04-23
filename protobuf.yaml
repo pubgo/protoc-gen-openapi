@@ -1,5 +1,5 @@
-checksum: 408bba623d90fde1570ce79d5e008862bd768015
-vendor: .proto
+checksum: 553259dd432a7fb1219eb3b41a6f7c9133870a2e
+vendor: proto-vendor
 root:
   - proto
 includes:

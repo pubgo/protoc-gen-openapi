@@ -2,8 +2,6 @@ module github.com/pubgo/protoc-gen-openapi
 
 go 1.23.0
 
-replace github.com/pubgo/funk => github.com/pubgo/funk v0.5.64
-
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.5-20250219170025-d39267d9df8f.1
 	github.com/bufbuild/protovalidate-go v0.9.2
@@ -11,7 +9,7 @@ require (
 	github.com/google/gnostic-models v0.6.9
 	github.com/lmittmann/tint v1.0.7
 	github.com/pb33f/libopenapi v0.21.5
-	github.com/pubgo/funk v0.0.0-00010101000000-000000000000
+	github.com/pubgo/funk v0.5.64
 	github.com/samber/lo v1.49.1
 	github.com/stretchr/testify v1.10.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250218202821-56aae31c358a
