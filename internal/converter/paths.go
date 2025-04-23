@@ -303,7 +303,7 @@ func methodToOperation(opts options.Options, method protoreflect.MethodDescripto
 			Description: "Error",
 			Content: util.MakeMediaTypes(
 				opts,
-				base.CreateSchemaProxyRef("#/components/schemas/connect.error"),
+				base.CreateSchemaProxyRef("#/components/schemas/lava.error"),
 				false,
 				isStreaming,
 			),

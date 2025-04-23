@@ -78,9 +78,9 @@ func fileToComponents(opts options.Options, fd protoreflect.FileDescriptor) (*hi
 				utils.CreateStringNode("br"),
 			},
 		}))
-		components.Schemas.Set("connect", base.CreateSchemaProxy(&base.Schema{
-			Title:       "connect",
-			Description: "Define the version of the Connect protocol",
+		components.Schemas.Set("lava", base.CreateSchemaProxy(&base.Schema{
+			Title:       "lava",
+			Description: "Define the version of the Lava protocol",
 			Enum: []*yaml.Node{
 				utils.CreateStringNode("v1"),
 			},
@@ -88,53 +88,72 @@ func fileToComponents(opts options.Options, fd protoreflect.FileDescriptor) (*hi
 	}
 
 	if hasMethods {
-		components.Schemas.Set("connect-protocol-version", base.CreateSchemaProxy(&base.Schema{
-			Title:       "Connect-Protocol-Version",
-			Description: "Define the version of the Connect protocol",
+		components.Schemas.Set("lava-protocol-version", base.CreateSchemaProxy(&base.Schema{
+			Title:       "Lava-Protocol-Version",
+			Description: "Define the version of the Lava protocol",
 			Type:        []string{"number"},
 			Enum:        []*yaml.Node{utils.CreateIntNode("1")},
 			Const:       utils.CreateIntNode("1"),
 		}))
 
-		components.Schemas.Set("connect-timeout-header", base.CreateSchemaProxy(&base.Schema{
-			Title:       "Connect-Timeout-Ms",
+		components.Schemas.Set("Lava-timeout-header", base.CreateSchemaProxy(&base.Schema{
+			Title:       "Lava-Timeout-Ms",
 			Description: "Define the timeout, in ms",
 			Type:        []string{"number"},
 		}))
 
-		connectErrorProps := orderedmap.New[string, *base.SchemaProxy]()
-		connectErrorProps.Set("code", base.CreateSchemaProxy(&base.Schema{
-			Description: "The status code, which should be an enum value of [google.rpc.Code][google.rpc.Code].",
-			Type:        []string{"string"},
-			Examples:    []*yaml.Node{utils.CreateStringNode("not_found")},
-			Enum: []*yaml.Node{
-				utils.CreateStringNode("canceled"),
-				utils.CreateStringNode("unknown"),
-				utils.CreateStringNode("invalid_argument"),
-				utils.CreateStringNode("deadline_exceeded"),
-				utils.CreateStringNode("not_found"),
-				utils.CreateStringNode("already_exists"),
-				utils.CreateStringNode("permission_denied"),
-				utils.CreateStringNode("resource_exhausted"),
-				utils.CreateStringNode("failed_precondition"),
-				utils.CreateStringNode("aborted"),
-				utils.CreateStringNode("out_of_range"),
-				utils.CreateStringNode("unimplemented"),
-				utils.CreateStringNode("internal"),
-				utils.CreateStringNode("unavailable"),
-				utils.CreateStringNode("data_loss"),
-				utils.CreateStringNode("unauthenticated"),
-			},
-		}))
-		connectErrorProps.Set("message", base.CreateSchemaProxy(&base.Schema{
-			Description: "A developer-facing error message, which should be in English. Any user-facing error message should be localized and sent in the [google.rpc.Status.details][google.rpc.Status.details] field, or localized by the client.",
-			Type:        []string{"string"},
-		}))
-		connectErrorProps.Set("detail", base.CreateSchemaProxyRef("#/components/schemas/google.protobuf.Any"))
-		components.Schemas.Set("connect.error", base.CreateSchemaProxy(&base.Schema{
-			Title:                "Connect Error",
-			Description:          `Error type returned by Connect: https://connectrpc.com/docs/go/errors/#http-representation`,
-			Properties:           connectErrorProps,
+		getErrorProps := func() *orderedmap.Map[string, *base.SchemaProxy] {
+			connectErrorProps := orderedmap.New[string, *base.SchemaProxy]()
+			connectErrorProps.Set("status_code", base.CreateSchemaProxy(&base.Schema{
+				Title:       "status code",
+				Description: "GRPC code corresponding to HTTP status code, which can be converted to each other",
+				Type:        []string{"string"},
+				Format:      "enum",
+				Examples:    []*yaml.Node{utils.CreateStringNode("OK")},
+				Enum: []*yaml.Node{
+					utils.CreateStringNode("OK"),
+					utils.CreateStringNode("Canceled"),
+					utils.CreateStringNode("InvalidArgument"),
+					utils.CreateStringNode("DeadlineExceeded"),
+					utils.CreateStringNode("NotFound"),
+					utils.CreateStringNode("AlreadyExists"),
+					utils.CreateStringNode("PermissionDenied"),
+					utils.CreateStringNode("ResourceExhausted"),
+					utils.CreateStringNode("FailedPrecondition"),
+					utils.CreateStringNode("Aborted"),
+					utils.CreateStringNode("OutOfRange"),
+					utils.CreateStringNode("Unimplemented"),
+					utils.CreateStringNode("Internal"),
+					utils.CreateStringNode("Unavailable"),
+					utils.CreateStringNode("DataLoss"),
+					utils.CreateStringNode("Unauthenticated"),
+				},
+			}))
+			connectErrorProps.Set("name", base.CreateSchemaProxy(&base.Schema{
+				Description: "Error name, e.g. lava.auth.token_not_found.",
+				Type:        []string{"string"},
+			}))
+			connectErrorProps.Set("message", base.CreateSchemaProxy(&base.Schema{
+				Description: "Error message, e.g. token not found",
+				Type:        []string{"string"},
+			}))
+			connectErrorProps.Set("code", base.CreateSchemaProxy(&base.Schema{
+				Description: "Business Code, e.g. 200001",
+				Type:        []string{"number"},
+			}))
+			connectErrorProps.Set("details", base.CreateSchemaProxy(&base.Schema{
+				Title:       "details",
+				Description: "Error detail include request or other user defined information",
+				Type:        []string{"array"},
+				Items:       &base.DynamicValue[*base.SchemaProxy, bool]{A: base.CreateSchemaProxyRef("#/components/schemas/google.protobuf.Any")},
+			}))
+			return connectErrorProps
+		}
+
+		components.Schemas.Set("lava.error", base.CreateSchemaProxy(&base.Schema{
+			Title:                "Lava Error",
+			Description:          `Error type returned by lava: https://github.com/pubgo/funk/blob/master/proto/errorpb/errors.proto`,
+			Properties:           getErrorProps(),
 			Type:                 []string{"object"},
 			AdditionalProperties: &base.DynamicValue[*base.SchemaProxy, bool]{N: 1, B: true},
 		}))

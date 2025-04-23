@@ -177,7 +177,7 @@ func httpRuleToPathMap(opts options.Options, md protoreflect.MethodDescriptor, r
 			Description: "Error",
 			Content: util.MakeMediaTypes(
 				opts,
-				base.CreateSchemaProxyRef("#/components/schemas/connect.error"),
+				base.CreateSchemaProxyRef("#/components/schemas/lava.error"),
 				false,
 				false,
 			),

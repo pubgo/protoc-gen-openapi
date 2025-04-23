@@ -31,10 +31,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/connect.error'
+                $ref: '#/components/schemas/lava.error'
             application/proto:
               schema:
-                $ref: '#/components/schemas/connect.error'
+                $ref: '#/components/schemas/lava.error'
         "200":
           description: Success
           content:
@@ -62,10 +62,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/connect.error'
+                $ref: '#/components/schemas/lava.error'
             application/proto:
               schema:
-                $ref: '#/components/schemas/connect.error'
+                $ref: '#/components/schemas/lava.error'
         "200":
           description: Success
           content:
@@ -85,50 +85,62 @@ components:
           title: text
       title: Message
       additionalProperties: false
-    connect-protocol-version:
+    lava-protocol-version:
       type: number
-      title: Connect-Protocol-Version
+      title: Lava-Protocol-Version
       enum:
         - 1
-      description: Define the version of the Connect protocol
+      description: Define the version of the Lava protocol
       const: 1
-    connect-timeout-header:
+    Lava-timeout-header:
       type: number
-      title: Connect-Timeout-Ms
+      title: Lava-Timeout-Ms
       description: Define the timeout, in ms
-    connect.error:
+    lava.error:
       type: object
       properties:
-        code:
+        status_code:
           type: string
           examples:
-            - not_found
+            - OK
+          title: status code
+          format: enum
           enum:
-            - canceled
-            - unknown
-            - invalid_argument
-            - deadline_exceeded
-            - not_found
-            - already_exists
-            - permission_denied
-            - resource_exhausted
-            - failed_precondition
-            - aborted
-            - out_of_range
-            - unimplemented
-            - internal
-            - unavailable
-            - data_loss
-            - unauthenticated
-          description: The status code, which should be an enum value of [google.rpc.Code][google.rpc.Code].
+            - OK
+            - Canceled
+            - InvalidArgument
+            - DeadlineExceeded
+            - NotFound
+            - AlreadyExists
+            - PermissionDenied
+            - ResourceExhausted
+            - FailedPrecondition
+            - Aborted
+            - OutOfRange
+            - Unimplemented
+            - Internal
+            - Unavailable
+            - DataLoss
+            - Unauthenticated
+          description: GRPC code corresponding to HTTP status code, which can be converted to each other
+        name:
+          type: string
+          description: Error name, e.g. lava.auth.token_not_found.
         message:
           type: string
-          description: A developer-facing error message, which should be in English. Any user-facing error message should be localized and sent in the [google.rpc.Status.details][google.rpc.Status.details] field, or localized by the client.
-        detail:
-          $ref: '#/components/schemas/google.protobuf.Any'
-      title: Connect Error
+          description: Error message, e.g. token not found
+        code:
+          type: number
+          description: Business Code, e.g. 200001
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/google.protobuf.Any'
+          title: details
+          description: Error detail include request or other user defined information
+      title: Lava Error
       additionalProperties: true
-      description: 'Error type returned by Connect: https://connectrpc.com/docs/go/errors/#http-representation'
+      description: 'Error type returned by lava: https://github.com/pubgo/funk/blob/master/proto/errorpb/errors.proto'
     google.protobuf.Any:
       type: object
       properties:

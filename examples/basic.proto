@@ -56,7 +56,7 @@ service Greeter {
   }
 
   // Writes a greeting (has side effects)
-  rpc WriteHello(HelloRequest) returns (HelloReply) {}
+  rpc WriteHello(HelloRequest) returns (Response) {}
 }
 
 // The request message containing the user's name.
@@ -76,4 +76,8 @@ message HelloRequest {
 // The response message containing the greetings
 message HelloReply {
   string message = 1;
+}
+
+message Response {
+  repeated HelloReply repl = 1;
 }
