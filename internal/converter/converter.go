@@ -35,23 +35,19 @@ func Convert(gen *protogen.Plugin, cfg options.Config) error {
 	opts := assert.Must1(cfg.ToOptions())
 
 	var req = gen.Request
-	annotator := &annotator{}
+	annotate := &annotator{}
 	if opts.MessageAnnotator == nil {
-		opts.MessageAnnotator = annotator
+		opts.MessageAnnotator = annotate
 	}
 	if opts.FieldAnnotator == nil {
-		opts.FieldAnnotator = annotator
+		opts.FieldAnnotator = annotate
 	}
 	if opts.FieldReferenceAnnotator == nil {
-		opts.FieldReferenceAnnotator = annotator
+		opts.FieldReferenceAnnotator = annotate
 	}
 
 	if opts.Debug {
-		slog.SetDefault(slog.New(
-			tint.NewHandler(os.Stderr, &tint.Options{
-				Level: slog.LevelDebug,
-			}),
-		))
+		slog.SetDefault(slog.New(tint.NewHandler(os.Stderr, &tint.Options{Level: slog.LevelDebug})))
 	}
 
 	genFiles := lo.SliceToMap(req.FileToGenerate, func(item string) (string, struct{}) { return item, struct{}{} })
@@ -75,11 +71,7 @@ func Convert(gen *protogen.Plugin, cfg options.Config) error {
 
 			v3Document, errs := document.BuildV3Model()
 			if len(errs) > 0 {
-				var merr error
-				for _, err := range errs {
-					merr = errors.Join(merr, err)
-				}
-				return &v3.Document{}, merr
+				return &v3.Document{}, errors.Join(errs...)
 			}
 			model := &v3Document.Model
 			initializeDoc(model)
@@ -105,10 +97,7 @@ func Convert(gen *protogen.Plugin, cfg options.Config) error {
 
 		// Create a per-file openapi spec if we're not merging all into one
 		if opts.Path == "" {
-			spec, err = newSpec()
-			if err != nil {
-				return err
-			}
+			spec = assert.Must1(newSpec())
 			spec.Info.Title = string(fd.FullName())
 			spec.Info.Description = util.FormatComments(fd.SourceLocations().ByDescriptor(fd))
 		}

@@ -35,18 +35,6 @@ var conf = options.Config{
 	WithServiceDescriptions:        flag.Bool("with-service-descriptions", false, "set to true will cause service names and their comments to be added to the end of info.description"),
 }
 
-//var conf = generator.Configuration{
-//	Version:         flag.String("version", "0.0.1", "version number text, e.g. 1.2.3"),
-//	Title:           flag.String("title", "", "name of the API"),
-//	Description:     flag.String("description", "", "description of the API"),
-//	Naming:          flag.String("naming", "json", `naming convention. Use "proto" for passing names directly from the proto files`),
-//	FQSchemaNaming:  flag.Bool("fq_schema_naming", false, `schema naming convention. If "true", generates fully-qualified schema names by prefixing them with the proto message package name`),
-//	EnumType:        flag.String("enum_type", "integer", `type for enum serialization. Use "string" for string-based serialization`),
-//	CircularDepth:   flag.Int("depth", 2, "depth of recursion for circular messages"),
-//	DefaultResponse: flag.Bool("default_response", true, `add default response. If "true", automatically adds a default response to operations which use the google.rpc.Status message. Useful if you use envoy or grpc-gateway to transcode as they use this type for their default error responses.`),
-//	OutputMode:      flag.String("output_mode", "merged", `output generation mode. By default, a single openapi.yaml is generated at the out folder. Use "source_relative' to generate a separate '[inputfile].openapi.yaml' next to each '[inputfile].proto'.`),
-//}
-
 var showVersion = flag.Bool("version", false, "print the version and exit")
 
 func main() {
