@@ -1,22 +1,26 @@
 package protovalidate
 
 import (
+	"log/slog"
 	"strconv"
 	"strings"
 
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
-	"github.com/bufbuild/protovalidate-go/resolve"
+	"buf.build/go/protovalidate"
 	"github.com/pb33f/libopenapi/datamodel/high/base"
 	"github.com/pb33f/libopenapi/utils"
-	"google.golang.org/protobuf/reflect/protoreflect"
-	"gopkg.in/yaml.v3"
-
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/options"
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/util"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"gopkg.in/yaml.v3"
 )
 
 func SchemaWithMessageAnnotations(opts options.Options, schema *base.Schema, desc protoreflect.MessageDescriptor) *base.Schema {
-	constraints := resolve.MessageConstraints(desc)
+	constraints, err := protovalidate.ResolveMessageRules(desc)
+	if err != nil {
+		slog.Warn("unable to resolve message rules", slog.Any("error", err))
+		return schema
+	}
 	if constraints == nil || constraints.GetDisabled() {
 		return schema
 	}
@@ -25,7 +29,11 @@ func SchemaWithMessageAnnotations(opts options.Options, schema *base.Schema, des
 }
 
 func SchemaWithFieldAnnotations(opts options.Options, schema *base.Schema, desc protoreflect.FieldDescriptor, onlyScalar bool) *base.Schema {
-	constraints := resolve.FieldConstraints(desc)
+	constraints, err := protovalidate.ResolveFieldRules(desc)
+	if err != nil {
+		slog.Warn("unable to resolve field rules", slog.Any("error", err))
+		return schema
+	}
 	if constraints == nil {
 		return schema
 	}
@@ -36,7 +44,7 @@ func SchemaWithFieldAnnotations(opts options.Options, schema *base.Schema, desc 
 			parent.Required = util.AppendStringDedupe(parent.Required, util.MakeFieldName(opts, desc))
 		}
 	}
-	updateSchemaWithFieldConstraints(schema, constraints, onlyScalar)
+	updateSchemaWithFieldRules(schema, constraints, onlyScalar)
 	return schema
 }
 
@@ -44,7 +52,11 @@ func PopulateParentProperties(opts options.Options, parent *base.Schema, desc pr
 	if parent == nil {
 		return parent
 	}
-	constraints := resolve.FieldConstraints(desc)
+	constraints, err := protovalidate.ResolveFieldRules(desc)
+	if err != nil {
+		slog.Warn("unable to resolve field rules", slog.Any("error", err))
+		return parent
+	}
 	if constraints == nil {
 		return parent
 	}
@@ -55,62 +67,62 @@ func PopulateParentProperties(opts options.Options, parent *base.Schema, desc pr
 }
 
 //gocyclo:ignore
-func updateSchemaWithFieldConstraints(schema *base.Schema, constraints *validate.FieldConstraints, onlyScalar bool) {
+func updateSchemaWithFieldRules(schema *base.Schema, constraints *validate.FieldRules, onlyScalar bool) {
 	if constraints == nil {
 		return
 	}
 	switch t := constraints.Type.(type) {
-	case *validate.FieldConstraints_Float:
+	case *validate.FieldRules_Float:
 		updateSchemaFloat(schema, t.Float)
-	case *validate.FieldConstraints_Double:
+	case *validate.FieldRules_Double:
 		updateSchemaDouble(schema, t.Double)
-	case *validate.FieldConstraints_Int32:
+	case *validate.FieldRules_Int32:
 		updateSchemaInt32(schema, t.Int32)
-	case *validate.FieldConstraints_Int64:
+	case *validate.FieldRules_Int64:
 		updateSchemaInt64(schema, t.Int64)
-	case *validate.FieldConstraints_Uint32:
+	case *validate.FieldRules_Uint32:
 		updateSchemaUint32(schema, t.Uint32)
-	case *validate.FieldConstraints_Uint64:
+	case *validate.FieldRules_Uint64:
 		updateSchemaUint64(schema, t.Uint64)
-	case *validate.FieldConstraints_Sint32:
+	case *validate.FieldRules_Sint32:
 		updateSchemaSint32(schema, t.Sint32)
-	case *validate.FieldConstraints_Sint64:
+	case *validate.FieldRules_Sint64:
 		updateSchemaSint64(schema, t.Sint64)
-	case *validate.FieldConstraints_Fixed32:
+	case *validate.FieldRules_Fixed32:
 		updateSchemaFixed32(schema, t.Fixed32)
-	case *validate.FieldConstraints_Fixed64:
+	case *validate.FieldRules_Fixed64:
 		updateSchemaFixed64(schema, t.Fixed64)
-	case *validate.FieldConstraints_Sfixed32:
+	case *validate.FieldRules_Sfixed32:
 		updateSchemaSfixed32(schema, t.Sfixed32)
-	case *validate.FieldConstraints_Sfixed64:
+	case *validate.FieldRules_Sfixed64:
 		updateSchemaSfixed64(schema, t.Sfixed64)
-	case *validate.FieldConstraints_Bool:
+	case *validate.FieldRules_Bool:
 		updateSchemaBool(schema, t.Bool)
-	case *validate.FieldConstraints_String_:
+	case *validate.FieldRules_String_:
 		updateSchemaString(schema, t.String_)
-	case *validate.FieldConstraints_Bytes:
+	case *validate.FieldRules_Bytes:
 		updateSchemaBytes(schema, t.Bytes)
-	case *validate.FieldConstraints_Enum:
+	case *validate.FieldRules_Enum:
 		updateSchemaEnum(schema, t.Enum)
-	case *validate.FieldConstraints_Any:
+	case *validate.FieldRules_Any:
 		updateSchemaAny(schema, t.Any)
-	case *validate.FieldConstraints_Duration:
+	case *validate.FieldRules_Duration:
 		updateSchemaDuration(schema, t.Duration)
-	case *validate.FieldConstraints_Timestamp:
+	case *validate.FieldRules_Timestamp:
 		updateSchemaTimestamp(schema, t.Timestamp)
 	}
 
 	if !onlyScalar {
 		switch t := constraints.Type.(type) {
-		case *validate.FieldConstraints_Repeated:
+		case *validate.FieldRules_Repeated:
 			updateSchemaRepeated(schema, t.Repeated)
-		case *validate.FieldConstraints_Map:
+		case *validate.FieldRules_Map:
 			updateSchemaMap(schema, t.Map)
 		}
 	}
 }
 
-func updateWithCEL(schema *base.Schema, constraints []*validate.Constraint) {
+func updateWithCEL(schema *base.Schema, constraints []*validate.Rule) {
 	if len(constraints) == 0 {
 		return
 	}
@@ -178,18 +190,18 @@ func updateSchemaDouble(schema *base.Schema, constraint *validate.DoubleRules) {
 	}
 	switch tt := constraint.LessThan.(type) {
 	case *validate.DoubleRules_Lt:
-		v := tt.Lt
+		v := float64(tt.Lt)
 		schema.ExclusiveMaximum = &base.DynamicValue[bool, float64]{N: 1, B: v}
 	case *validate.DoubleRules_Lte:
-		v := tt.Lte
+		v := float64(tt.Lte)
 		schema.Maximum = &v
 	}
 	switch tt := constraint.GreaterThan.(type) {
 	case *validate.DoubleRules_Gt:
-		v := tt.Gt
+		v := float64(tt.Gt)
 		schema.ExclusiveMinimum = &base.DynamicValue[bool, float64]{N: 1, B: v}
 	case *validate.DoubleRules_Gte:
-		v := tt.Gte
+		v := float64(tt.Gte)
 		schema.Minimum = &v
 	}
 	if len(constraint.In) > 0 {
@@ -801,7 +813,7 @@ func updateSchemaRepeated(schema *base.Schema, constraint *validate.RepeatedRule
 		schema.MaxItems = &v
 	}
 	if constraint.Items != nil && schema.Items != nil && schema.Items.A != nil && !schema.Items.A.IsReference() {
-		updateSchemaWithFieldConstraints(schema.Items.A.Schema(), constraint.Items, false)
+		updateSchemaWithFieldRules(schema.Items.A.Schema(), constraint.Items, false)
 	}
 }
 
@@ -815,9 +827,9 @@ func updateSchemaMap(schema *base.Schema, constraint *validate.MapRules) {
 		schema.MaxProperties = &v
 	}
 	// NOTE: Most of these properties don't make sense for object keys
-	// updateSchemaWithFieldConstraints(schema, constraint.Keys)
+	// updateSchemaWithFieldRules(schema, constraint.Keys)
 	if schema.AdditionalProperties != nil && constraint.Values != nil {
-		updateSchemaWithFieldConstraints(schema.AdditionalProperties.A.Schema(), constraint.Values, false)
+		updateSchemaWithFieldRules(schema.AdditionalProperties.A.Schema(), constraint.Values, false)
 	}
 }
 

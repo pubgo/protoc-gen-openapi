@@ -1,7 +1,7 @@
 package converter
 
 import (
-	openapiv3 "github.com/google/gnostic-models/openapiv3"
+	openapiv3 "github.com/google/gnostic/openapiv3"
 	"github.com/pb33f/libopenapi/datamodel/high/base"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/orderedmap"

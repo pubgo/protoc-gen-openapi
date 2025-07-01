@@ -7,7 +7,7 @@
 package generator
 
 import (
-	openapiv3 "github.com/google/gnostic-models/openapiv3"
+	openapiv3 "github.com/google/gnostic/openapiv3"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	descriptorpb "google.golang.org/protobuf/types/descriptorpb"
