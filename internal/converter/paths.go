@@ -1,6 +1,7 @@
 package converter
 
 import (
+	openapiv3 "github.com/google/gnostic-models/openapiv3"
 	"github.com/pb33f/libopenapi/datamodel/high/base"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/orderedmap"
@@ -118,8 +119,12 @@ func mergeOperationV2(existing *v3.Operation, srv *generator.Service) {
 	}
 
 	existing.Tags = lo.Uniq(append(existing.Tags, srv.Tags...))
-	existing.Security = append(existing.Security, gnostic.ToSecurityRequirements(srv.Securities)...)
+	securityList := lo.Map(srv.Security, func(item *openapiv3.NamedStringArray, index int) *openapiv3.SecurityRequirement {
+		return &openapiv3.SecurityRequirement{AdditionalProperties: []*openapiv3.NamedStringArray{item}}
+	})
+	existing.Security = append(existing.Security, gnostic.ToSecurityRequirements(securityList)...)
 	existing.Servers = append(existing.Servers, gnostic.ToServers(srv.Servers)...)
+	existing.Parameters = append(existing.Parameters, gnostic.ToParameter(srv.Parameters)...)
 
 	ext := gnostic.ToExtensions(srv.Extensions)
 	if ext == nil {

@@ -9,6 +9,7 @@ import (
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/orderedmap"
 	"github.com/pb33f/libopenapi/utils"
+	"github.com/samber/lo"
 	"gopkg.in/yaml.v3"
 
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/options"
@@ -80,7 +81,7 @@ func appendComponents(spec *highv3.Document, c *goa3.Components) {
 		Schemas:         toSchemaOrReferenceMap(c.Schemas.GetAdditionalProperties()),
 		SecuritySchemes: toSecuritySchemes(c.SecuritySchemes),
 		Responses:       toResponsesMap(c.Responses),
-		Parameters:      toParametersMap(c.Parameters),
+		Parameters:      ToParametersMap(c.Parameters),
 		Examples:        toExamples(c.Examples),
 		RequestBodies:   toRequestBodiesMap(c.RequestBodies),
 		Headers:         toHeaders(c.Headers),
@@ -90,12 +91,18 @@ func appendComponents(spec *highv3.Document, c *goa3.Components) {
 	})
 }
 
-func toParametersMap(params *goa3.ParametersOrReferences) *orderedmap.Map[string, *v3.Parameter] {
+func ToParametersMap(params *goa3.ParametersOrReferences) *orderedmap.Map[string, *v3.Parameter] {
 	m := orderedmap.New[string, *v3.Parameter]()
 	for _, item := range params.GetAdditionalProperties() {
 		m.Set(item.Name, toParameter(item.GetValue()))
 	}
 	return m
+}
+
+func ToParameter(params []*goa3.Parameter) []*v3.Parameter {
+	return lo.Map(params, func(item *goa3.Parameter, _ int) *v3.Parameter {
+		return toParameter(&goa3.ParameterOrReference{Oneof: &goa3.ParameterOrReference_Parameter{Parameter: item}})
+	})
 }
 
 func toRequestBodiesMap(bodies *goa3.RequestBodiesOrReferences) *orderedmap.Map[string, *v3.RequestBody] {
