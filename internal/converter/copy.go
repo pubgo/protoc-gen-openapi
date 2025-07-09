@@ -141,6 +141,7 @@ func mergeOperationV2(existing *v3.Operation, srv *generator.Service) {
 	existing.Security = append(existing.Security, gnostic.ToSecurityRequirements(securityList)...)
 	existing.Servers = append(existing.Servers, gnostic.ToServers(srv.Servers)...)
 	existing.Parameters = append(existing.Parameters, gnostic.ToParameter(srv.Parameters)...)
+	existing.Parameters = lo.UniqBy(existing.Parameters, func(item *v3.Parameter) string { return item.Name + item.In })
 
 	ext := gnostic.ToExtensions(srv.Extensions)
 	if ext == nil {
