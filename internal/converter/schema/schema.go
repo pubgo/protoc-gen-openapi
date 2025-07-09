@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strings"
 
 	"github.com/pb33f/libopenapi/datamodel/high/base"
 	"github.com/pb33f/libopenapi/orderedmap"
 	"github.com/pb33f/libopenapi/utils"
-	"google.golang.org/protobuf/reflect/protoreflect"
-	"gopkg.in/yaml.v3"
-
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/options"
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/util"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"gopkg.in/yaml.v3"
 )
 
 func MessageToSchema(opts options.Options, tt protoreflect.MessageDescriptor) (string, *base.Schema) {
@@ -25,7 +25,6 @@ func MessageToSchema(opts options.Options, tt protoreflect.MessageDescriptor) (s
 		}
 		return wk.ID, wk.Schema
 	}
-
 	title := string(tt.Name())
 	if opts.FullyQualifiedMessageNames {
 		title = string(tt.FullName())
@@ -37,52 +36,42 @@ func MessageToSchema(opts options.Options, tt protoreflect.MessageDescriptor) (s
 		AdditionalProperties: &base.DynamicValue[*base.SchemaProxy, bool]{N: 1, B: false},
 	}
 
-	oneOneGroups := map[protoreflect.FullName][]string{}
+	oneOneGroups := map[protoreflect.FullName][]protoreflect.FieldDescriptor{}
+	regularProps := orderedmap.New[string, *base.SchemaProxy]()
 
-	props := orderedmap.New[string, *base.SchemaProxy]()
 	fields := tt.Fields()
 	for i := 0; i < fields.Len(); i++ {
 		field := fields.Get(i)
 		if oneOf := field.ContainingOneof(); oneOf != nil && !oneOf.IsSynthetic() {
-			oneOneGroups[oneOf.FullName()] = append(oneOneGroups[oneOf.FullName()], util.MakeFieldName(opts, field))
+			oneOneGroups[oneOf.FullName()] = append(oneOneGroups[oneOf.FullName()], field)
+			continue
 		}
-
 		prop := FieldToSchema(opts, base.CreateSchemaProxy(s), field)
 		if field.HasOptionalKeyword() {
-			schema := prop.Schema()
-			props.Set(util.MakeFieldName(opts, field), base.CreateSchemaProxy(&base.Schema{
-				Type:        schema.Type,
-				Title:       schema.Title,
-				Description: schema.Description,
-				Deprecated:  schema.Deprecated,
-				Examples:    schema.Examples,
-				OneOf: []*base.SchemaProxy{
-					prop,
-					base.CreateSchemaProxy(&base.Schema{Type: []string{"null"}}),
-				},
-			}))
-		} else {
-			props.Set(util.MakeFieldName(opts, field), prop)
+			nullable := true
+			prop.Schema().Nullable = &nullable
 		}
+		regularProps.Set(util.MakeFieldName(opts, field), prop)
 	}
 
-	s.Properties = props
-
+	s.Properties = regularProps
 	if len(oneOneGroups) > 0 {
 		// make all of groups
-		var groupKeys []protoreflect.FullName
+		groupKeys := []protoreflect.FullName{}
 		for key := range oneOneGroups {
 			groupKeys = append(groupKeys, key)
 		}
 		slices.Sort(groupKeys)
-		var allOfs []*base.SchemaProxy
+		allOfs := []*base.SchemaProxy{}
 		for _, key := range groupKeys {
 			items := oneOneGroups[key]
-			slices.Sort(items)
-			allOfs = append(allOfs, makeOneOfGroup(items))
+			slices.SortFunc(items, func(a, b protoreflect.FieldDescriptor) int {
+				return strings.Compare(string(a.Name()), string(b.Name()))
+			})
+			allOfs = append(allOfs, makeOneOfGroup(opts, items))
 		}
 		if len(allOfs) == 1 {
-			s.AnyOf = allOfs[0].Schema().AnyOf
+			s.OneOf = allOfs[0].Schema().OneOf
 		} else {
 			s.AllOf = append(s.AllOf, allOfs...)
 		}
@@ -147,7 +136,6 @@ func ScalarFieldToSchema(opts options.Options, parent *base.SchemaProxy, tt prot
 		ParentProxy: parent,
 		Deprecated:  util.IsFieldDeprecated(tt),
 	}
-
 	if !inContainer {
 		s.Title = string(tt.Name())
 		s.Description = util.TypeFieldDescription(opts, tt)
@@ -199,14 +187,26 @@ func ReferenceFieldToSchema(opts options.Options, parent *base.SchemaProxy, tt p
 	}
 }
 
-func makeOneOfGroup(fields []string) *base.SchemaProxy {
-	nestedSchemas := make([]*base.SchemaProxy, 0, len(fields))
-	rootSchemas := make([]*base.SchemaProxy, 0, len(fields)+1)
+func makeOneOfGroup(opts options.Options, fields []protoreflect.FieldDescriptor) *base.SchemaProxy {
+	rootSchemas := make([]*base.SchemaProxy, 0, len(fields))
 	for _, field := range fields {
-		rootSchemas = append(rootSchemas, base.CreateSchemaProxy(&base.Schema{Required: []string{field}}))
-		nestedSchemas = append(nestedSchemas, base.CreateSchemaProxy(&base.Schema{Required: []string{field}}))
+		schema := &base.Schema{
+			/*
+				Having the title prop here is redundant because it'll also be included inside the
+				properties object. But some platforms like readme.io require it to be at the top level for them to
+				properly interpret it.
+			*/
+			Title:      string(field.Name()),
+			Properties: orderedmap.New[string, *base.SchemaProxy](),
+		}
+
+		fieldName := util.MakeFieldName(opts, field)
+		propSchema := FieldToSchema(opts, base.CreateSchemaProxy(schema), field)
+		schema.Properties.Set(fieldName, propSchema)
+		schema.Required = []string{fieldName}
+
+		rootSchemas = append(rootSchemas, base.CreateSchemaProxy(schema))
 	}
 
-	rootSchemas = append(rootSchemas, base.CreateSchemaProxy(&base.Schema{Not: base.CreateSchemaProxy(&base.Schema{AnyOf: nestedSchemas})}))
-	return base.CreateSchemaProxy(&base.Schema{AnyOf: rootSchemas})
+	return base.CreateSchemaProxy(&base.Schema{OneOf: rootSchemas})
 }

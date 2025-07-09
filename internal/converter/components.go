@@ -4,7 +4,6 @@ import (
 	"log/slog"
 
 	"github.com/pb33f/libopenapi/datamodel/high/base"
-	highv3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/orderedmap"
 	"github.com/pb33f/libopenapi/utils"
@@ -12,12 +11,11 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/options"
-	"github.com/pubgo/protoc-gen-openapi/internal/converter/util"
 )
 
-func fileToComponents(opts options.Options, fd protoreflect.FileDescriptor) (*highv3.Components, error) {
+func fileToComponents(opts options.Options, fd protoreflect.FileDescriptor) (*v3.Components, error) {
 	// Add schema from messages/enums
-	components := &highv3.Components{
+	components := &v3.Components{
 		Schemas:         orderedmap.New[string, *base.SchemaProxy](),
 		Responses:       orderedmap.New[string, *v3.Response](),
 		Parameters:      orderedmap.New[string, *v3.Parameter](),
@@ -78,88 +76,16 @@ func fileToComponents(opts options.Options, fd protoreflect.FileDescriptor) (*hi
 				utils.CreateStringNode("br"),
 			},
 		}))
-		components.Schemas.Set("lava", base.CreateSchemaProxy(&base.Schema{
-			Title:       "lava",
-			Description: "Define the version of the Lava protocol",
+		components.Schemas.Set("connect", base.CreateSchemaProxy(&base.Schema{
+			Title:       "connect",
+			Description: "Define the version of the Connect protocol",
 			Enum: []*yaml.Node{
 				utils.CreateStringNode("v1"),
 			},
 		}))
 	}
 
-	if hasMethods {
-		components.Schemas.Set("lava-protocol-version", base.CreateSchemaProxy(&base.Schema{
-			Title:       "Lava-Protocol-Version",
-			Description: "Define the version of the Lava protocol",
-			Type:        []string{"number"},
-			Enum:        []*yaml.Node{utils.CreateIntNode("1")},
-			Const:       utils.CreateIntNode("1"),
-		}))
-
-		components.Schemas.Set("lava-timeout-header", base.CreateSchemaProxy(&base.Schema{
-			Title:       "Lava-Timeout-Ms",
-			Description: "Define the timeout, in ms",
-			Type:        []string{"number"},
-		}))
-
-		getErrorProps := func() *orderedmap.Map[string, *base.SchemaProxy] {
-			connectErrorProps := orderedmap.New[string, *base.SchemaProxy]()
-			connectErrorProps.Set("status_code", base.CreateSchemaProxy(&base.Schema{
-				Title:       "status code",
-				Description: "GRPC code corresponding to HTTP status code, which can be converted to each other",
-				Type:        []string{"string"},
-				Format:      "enum",
-				Examples:    []*yaml.Node{utils.CreateStringNode("OK")},
-				Enum: []*yaml.Node{
-					utils.CreateStringNode("OK"),
-					utils.CreateStringNode("Canceled"),
-					utils.CreateStringNode("InvalidArgument"),
-					utils.CreateStringNode("DeadlineExceeded"),
-					utils.CreateStringNode("NotFound"),
-					utils.CreateStringNode("AlreadyExists"),
-					utils.CreateStringNode("PermissionDenied"),
-					utils.CreateStringNode("ResourceExhausted"),
-					utils.CreateStringNode("FailedPrecondition"),
-					utils.CreateStringNode("Aborted"),
-					utils.CreateStringNode("OutOfRange"),
-					utils.CreateStringNode("Unimplemented"),
-					utils.CreateStringNode("Internal"),
-					utils.CreateStringNode("Unavailable"),
-					utils.CreateStringNode("DataLoss"),
-					utils.CreateStringNode("Unauthenticated"),
-				},
-			}))
-			connectErrorProps.Set("name", base.CreateSchemaProxy(&base.Schema{
-				Description: "Error name, e.g. lava.auth.token_not_found.",
-				Type:        []string{"string"},
-			}))
-			connectErrorProps.Set("message", base.CreateSchemaProxy(&base.Schema{
-				Description: "Error message, e.g. token not found",
-				Type:        []string{"string"},
-			}))
-			connectErrorProps.Set("code", base.CreateSchemaProxy(&base.Schema{
-				Description: "Business Code, e.g. 200001",
-				Type:        []string{"number"},
-			}))
-			connectErrorProps.Set("details", base.CreateSchemaProxy(&base.Schema{
-				Title:       "details",
-				Description: "Error detail include request or other user defined information",
-				Type:        []string{"array"},
-				Items:       &base.DynamicValue[*base.SchemaProxy, bool]{A: base.CreateSchemaProxyRef("#/components/schemas/google.protobuf.Any")},
-			}))
-			return connectErrorProps
-		}
-
-		components.Schemas.Set("lava.error", base.CreateSchemaProxy(&base.Schema{
-			Title:                "Lava Error",
-			Description:          `Error type returned by lava: https://github.com/pubgo/funk/blob/master/proto/errorpb/errors.proto`,
-			Properties:           getErrorProps(),
-			Type:                 []string{"object"},
-			AdditionalProperties: &base.DynamicValue[*base.SchemaProxy, bool]{N: 1, B: true},
-		}))
-		anyPair := util.NewGoogleAny()
-		components.Schemas.Set(anyPair.ID, base.CreateSchemaProxy(anyPair.Schema))
-	}
+	setComponents(hasMethods, components)
 
 	return components, nil
 }

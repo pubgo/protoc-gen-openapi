@@ -3,6 +3,7 @@ package converter
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -14,14 +15,11 @@ import (
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/index"
 	"github.com/pb33f/libopenapi/orderedmap"
-	"github.com/pubgo/funk/assert"
-	"github.com/pubgo/funk/errors/errcheck"
-	"github.com/pubgo/funk/recovery"
-	"github.com/samber/lo"
-	"google.golang.org/protobuf/compiler/protogen"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
+	pluginpb "google.golang.org/protobuf/types/pluginpb"
 	"gopkg.in/yaml.v3"
 
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/gnostic"
@@ -29,33 +27,64 @@ import (
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/util"
 )
 
-func Convert(gen *protogen.Plugin, cfg options.Config) error {
-	defer recovery.Exit()
+func ConvertFrom(rd io.Reader) (*pluginpb.CodeGeneratorResponse, error) {
+	input, err := io.ReadAll(rd)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read request: %w", err)
+	}
 
-	opts := assert.Must1(cfg.ToOptions())
+	req := &pluginpb.CodeGeneratorRequest{}
+	err = proto.Unmarshal(input, req)
+	if err != nil {
+		return nil, fmt.Errorf("can't unmarshal input: %w", err)
+	}
 
-	var req = gen.Request
-	annotate := &annotator{}
+	return Convert(req)
+}
+
+// Convert is the primary entrypoint for the protoc plugin. It takes a *pluginpb.CodeGeneratorRequest
+// and returns a *pluginpb.CodeGeneratorResponse.
+func Convert(req *pluginpb.CodeGeneratorRequest) (*pluginpb.CodeGeneratorResponse, error) {
+	opts, err := options.FromString(req.GetParameter())
+	if err != nil {
+		return nil, err
+	}
+	return ConvertWithOptions(req, opts)
+}
+
+func ConvertWithOptions(req *pluginpb.CodeGeneratorRequest, opts options.Options) (*pluginpb.CodeGeneratorResponse, error) {
+	annotator := &annotator{}
 	if opts.MessageAnnotator == nil {
-		opts.MessageAnnotator = annotate
+		opts.MessageAnnotator = annotator
 	}
 	if opts.FieldAnnotator == nil {
-		opts.FieldAnnotator = annotate
+		opts.FieldAnnotator = annotator
 	}
 	if opts.FieldReferenceAnnotator == nil {
-		opts.FieldReferenceAnnotator = annotate
+		opts.FieldReferenceAnnotator = annotator
 	}
 
 	if opts.Debug {
-		slog.SetDefault(slog.New(tint.NewHandler(os.Stderr, &tint.Options{Level: slog.LevelDebug})))
+		slog.SetDefault(slog.New(
+			tint.NewHandler(os.Stderr, &tint.Options{
+				Level: slog.LevelDebug,
+			}),
+		))
 	}
 
-	genFiles := lo.SliceToMap(req.FileToGenerate, func(item string) (string, struct{}) { return item, struct{}{} })
+	files := []*pluginpb.CodeGeneratorResponse_File{}
+	genFiles := make(map[string]struct{}, len(req.FileToGenerate))
+	for _, file := range req.FileToGenerate {
+		genFiles[file] = struct{}{}
+	}
 
 	// We need this to resolve dependencies when making protodesc versions of the files
-	resolver := assert.Must1(protodesc.NewFiles(&descriptorpb.FileDescriptorSet{
+	resolver, err := protodesc.NewFiles(&descriptorpb.FileDescriptorSet{
 		File: req.GetProtoFile(),
-	}))
+	})
+	if err != nil {
+		return nil, err
+	}
 
 	newSpec := func() (*v3.Document, error) {
 		model := &v3.Document{}
@@ -68,10 +97,13 @@ func Convert(gen *protogen.Plugin, cfg options.Config) error {
 			if err != nil {
 				return &v3.Document{}, fmt.Errorf("unmarshalling base: %w", err)
 			}
-
 			v3Document, errs := document.BuildV3Model()
 			if len(errs) > 0 {
-				return &v3.Document{}, errors.Join(errs...)
+				var merr error
+				for _, err := range errs {
+					merr = errors.Join(merr, err)
+				}
+				return &v3.Document{}, merr
 			}
 			model := &v3Document.Model
 			initializeDoc(model)
@@ -79,9 +111,17 @@ func Convert(gen *protogen.Plugin, cfg options.Config) error {
 		}
 	}
 
-	spec := assert.Must1(newSpec())
+	overrideComponents, err := getOverrideComponents(opts)
+	if err != nil {
+		return nil, err
+	}
 
+	spec, err := newSpec()
+	if err != nil {
+		return nil, err
+	}
 	outFiles := map[string]*v3.Document{}
+
 	for _, fileDesc := range req.GetProtoFile() {
 		if _, ok := genFiles[fileDesc.GetName()]; !ok {
 			continue
@@ -92,17 +132,22 @@ func Convert(gen *protogen.Plugin, cfg options.Config) error {
 		fd, err := resolver.FindFileByPath(fileDesc.GetName())
 		if err != nil {
 			slog.Error("error loading file", slog.Any("error", err))
-			return err
+			return nil, err
 		}
 
 		// Create a per-file openapi spec if we're not merging all into one
 		if opts.Path == "" {
-			spec = assert.Must1(newSpec())
+			spec, err = newSpec()
+			if err != nil {
+				return nil, err
+			}
 			spec.Info.Title = string(fd.FullName())
 			spec.Info.Description = util.FormatComments(fd.SourceLocations().ByDescriptor(fd))
 		}
 
-		assert.Must(appendToSpec(opts, spec, fd))
+		if err := appendToSpec(opts, spec, fd); err != nil {
+			return nil, err
+		}
 
 		if opts.Path == "" {
 			name := fileDesc.GetName()
@@ -111,34 +156,70 @@ func Convert(gen *protogen.Plugin, cfg options.Config) error {
 		}
 
 		spec.Tags = mergeTags(spec.Tags)
+		if overrideComponents != nil {
+			util.AppendComponents(spec, overrideComponents)
+		}
 	}
 
 	if opts.Path != "" {
 		outFiles[opts.Path] = spec
 	}
 
-	for path, doc := range outFiles {
-		content := assert.Must1(specToFile(opts, doc))
-
-		gg := gen.NewGeneratedFile(path, "")
-		assert.Must1(gg.Write([]byte(content)))
+	for path, spec := range outFiles {
+		path := path
+		spec := spec
+		content, err := specToFile(opts, spec)
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, &pluginpb.CodeGeneratorResponse_File{
+			Name:              &path,
+			Content:           &content,
+			GeneratedCodeInfo: &descriptorpb.GeneratedCodeInfo{},
+		})
 	}
 
-	return nil
+	features := uint64(pluginpb.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL | pluginpb.CodeGeneratorResponse_FEATURE_SUPPORTS_EDITIONS)
+	return &pluginpb.CodeGeneratorResponse{
+		SupportedFeatures: &features,
+		MinimumEdition:    proto.Int32(int32(descriptorpb.Edition_EDITION_PROTO2)),
+		MaximumEdition:    proto.Int32(int32(descriptorpb.Edition_EDITION_2024)),
+		File:              files,
+	}, nil
+}
+
+func getOverrideComponents(opts options.Options) (*v3.Components, error) {
+	if len(opts.OverrideOpenAPI) == 0 {
+		return nil, nil
+	}
+	document, err := libopenapi.NewDocument(opts.OverrideOpenAPI)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshalling base: %w", err)
+	}
+	v3Document, errs := document.BuildV3Model()
+	if len(errs) > 0 {
+		var merr error
+		for _, err := range errs {
+			merr = errors.Join(merr, err)
+		}
+		return nil, merr
+	}
+	return v3Document.Model.Components, nil
 }
 
 func mergeTags(tags []*base.Tag) []*base.Tag {
+
 	if len(tags) == 0 {
 		return tags
 	}
 
-	tagList := make([]*base.Tag, 0, len(tags))
+	res := make([]*base.Tag, 0, len(tags))
 	found := make(map[string]*base.Tag)
 
 	for _, tag := range tags {
 		if found[tag.Name] == nil {
 			found[tag.Name] = tag
-			tagList = append(tagList, tag)
+			res = append(res, tag)
 			continue
 		}
 
@@ -155,7 +236,7 @@ func mergeTags(tags []*base.Tag) []*base.Tag {
 		}
 	}
 
-	return tagList
+	return res
 }
 
 func specToFile(opts options.Options, spec *v3.Document) (string, error) {
@@ -163,18 +244,21 @@ func specToFile(opts options.Options, spec *v3.Document) (string, error) {
 	case "yaml":
 		return string(spec.RenderWithIndention(2)), nil
 	case "json":
-		b := assert.Must1(spec.RenderJSON("  "))
+		b, err := spec.RenderJSON("  ")
+		if err != nil {
+			return "", err
+		}
 		return string(b), nil
 	default:
 		return "", fmt.Errorf("unknown format: %s", opts.Format)
 	}
 }
 
-func appendToSpec(opts options.Options, spec *v3.Document, fd protoreflect.FileDescriptor) (gErr error) {
+func appendToSpec(opts options.Options, spec *v3.Document, fd protoreflect.FileDescriptor) error {
 	gnostic.SpecWithFileAnnotations(spec, fd)
 	components, err := fileToComponents(opts, fd)
-	if errcheck.Check(&gErr, err) {
-		return
+	if err != nil {
+		return err
 	}
 
 	initializeDoc(spec)
@@ -182,8 +266,8 @@ func appendToSpec(opts options.Options, spec *v3.Document, fd protoreflect.FileD
 	appendServiceDocs(opts, spec, fd)
 	util.AppendComponents(spec, components)
 
-	if errcheck.Check(&gErr, addPathItemsFromFile(opts, fd, spec.Paths)) {
-		return
+	if err := addPathItemsFromFileV1(opts, fd, spec.Paths); err != nil {
+		return err
 	}
 	spec.Tags = append(spec.Tags, fileToTags(opts, fd)...)
 	return nil
@@ -193,13 +277,11 @@ func appendServiceDocs(opts options.Options, spec *v3.Document, fd protoreflect.
 	if !opts.WithServiceDescriptions {
 		return
 	}
-
 	var builder strings.Builder
 	if spec.Info.Description != "" {
 		builder.WriteString(spec.Info.Description)
 		builder.WriteString("\n\n")
 	}
-
 	services := fd.Services()
 	for i := 0; i < services.Len(); i++ {
 		service := services.Get(i)

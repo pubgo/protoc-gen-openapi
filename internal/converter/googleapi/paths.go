@@ -1,8 +1,12 @@
 package googleapi
 
 import (
+	"fmt"
+	"iter"
 	"log/slog"
 	"net/http"
+	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/pb33f/libopenapi/datamodel/high/base"
@@ -12,45 +16,93 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	"github.com/pubgo/protoc-gen-openapi/generator"
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/options"
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/schema"
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/util"
 )
 
-func GetSrvOptions(opts options.Options, serviceDescriptor protoreflect.ServiceDescriptor) *generator.Service {
-	if opts.IgnoreGoogleApiHTTP {
-		return nil
+func mergeOrAppendParameter(existingParams []*v3.Parameter, newParam *v3.Parameter) []*v3.Parameter {
+	found := false
+	for _, p := range existingParams {
+		if p.Name != newParam.Name || p.In != newParam.In {
+			continue
+		}
+		found = true
+		if p.Description == "" && newParam.Description != "" {
+			p.Description = newParam.Description
+		}
+		// If p.Required is nil (not set) and newParam.Required is set, then use newParam.Required.
+		// This preserves an explicitly set false in p.Required.
+		if p.Required == nil && newParam.Required != nil {
+			p.Required = newParam.Required
+		}
+		if p.Schema == nil && newParam.Schema != nil {
+			p.Schema = newParam.Schema
+		} else if p.Schema != nil && newParam.Schema != nil {
+			// Merge schema properties
+			if p.Schema.Schema().Title == "" {
+				p.Schema.Schema().Title = newParam.Schema.Schema().Title
+			}
+			if p.Schema.Schema().Description == "" {
+				p.Schema.Schema().Description = newParam.Schema.Schema().Description
+			}
+			if len(p.Schema.Schema().Type) == 0 {
+				p.Schema.Schema().Type = newParam.Schema.Schema().Type
+			}
+			if p.Schema.Schema().Format == "" {
+				p.Schema.Schema().Format = newParam.Schema.Schema().Format
+			}
+			if len(p.Schema.Schema().Enum) == 0 {
+				p.Schema.Schema().Enum = newParam.Schema.Schema().Enum
+			}
+			if p.Schema.Schema().Default == nil {
+				p.Schema.Schema().Default = newParam.Schema.Schema().Default
+			}
+			if p.Schema.Schema().Items == nil {
+				p.Schema.Schema().Items = newParam.Schema.Schema().Items
+			}
+		}
+		// If p.Explode is nil (not set) and newParam.Explode is set, then use newParam.Explode.
+		// This preserves an explicitly set false in p.Explode.
+		if p.Explode == nil {
+			p.Explode = newParam.Explode
+		}
+		// Assuming Deprecated, AllowEmptyValue, AllowReserved are bool (non-pointer) based on compiler errors
+		// This means "empty/nil" is false. We update if current is false.
+		if !p.Deprecated { // If p.Deprecated is false
+			p.Deprecated = newParam.Deprecated // Set it from newParam
+		}
+		if !p.AllowEmptyValue { // If p.AllowEmptyValue is false
+			p.AllowEmptyValue = newParam.AllowEmptyValue // Set it from newParam
+		}
+		if p.Style == "" {
+			p.Style = newParam.Style
+		}
+		if !p.AllowReserved { // If p.AllowReserved is false
+			p.AllowReserved = newParam.AllowReserved // Set it from newParam
+		}
 	}
-
-	srvOpts := serviceDescriptor.Options()
-	if !proto.HasExtension(srvOpts, generator.E_Service) {
-		return nil
+	if !found {
+		existingParams = append(existingParams, newParam)
 	}
-
-	srv, ok := proto.GetExtension(srvOpts, generator.E_Service).(*generator.Service)
-	if !ok {
-		return nil
-	}
-
-	return srv
+	return existingParams
 }
 
+// namedPathPattern is a regular expression to match named path patterns in the form {name=path/*/pattern}
+var namedPathPattern = regexp.MustCompile("{(.+)=(.+)}")
+
 func MakePathItems(opts options.Options, md protoreflect.MethodDescriptor) *orderedmap.Map[string, *v3.PathItem] {
-	if opts.IgnoreGoogleApiHTTP {
+	if opts.IgnoreGoogleapiHTTP {
 		return nil
 	}
-
-	mdOpts := md.Options()
-	if !proto.HasExtension(mdOpts, annotations.E_Http) {
+	mdopts := md.Options()
+	if !proto.HasExtension(mdopts, annotations.E_Http) {
 		return nil
 	}
-
-	rule, ok := proto.GetExtension(mdOpts, annotations.E_Http).(*annotations.HttpRule)
+	rule, ok := proto.GetExtension(mdopts, annotations.E_Http).(*annotations.HttpRule)
 	if !ok {
 		return nil
 	}
-
 	return httpRuleToPathMap(opts, md, rule)
 }
 
@@ -73,12 +125,10 @@ func httpRuleToPathMap(opts options.Options, md protoreflect.MethodDescriptor, r
 		slog.Warn("invalid type of pattern for HTTP rule", slog.Any("pattern", pattern))
 		return nil
 	}
-
 	if method == "" {
 		slog.Warn("invalid HTTP rule: method is blank", slog.Any("method", md))
 		return nil
 	}
-
 	if template == "" {
 		slog.Warn("invalid HTTP rule: path template is blank", slog.Any("method", md))
 		return nil
@@ -95,15 +145,31 @@ func httpRuleToPathMap(opts options.Options, md protoreflect.MethodDescriptor, r
 
 	fd := md.ParentFile()
 	service := md.Parent().(protoreflect.ServiceDescriptor)
+
+	operationId := string(md.FullName())
+	if opts.ShortOperationIds {
+		operationId = string(service.Name()) + "_" + string(md.Name())
+	}
 	op := &v3.Operation{
 		Summary:     string(md.Name()),
-		OperationId: string(md.FullName()),
-		Tags:        []string{strings.ReplaceAll(string(service.FullName()), ".", "/")},
+		OperationId: operationId,
 		Description: util.FormatComments(fd.SourceLocations().ByDescriptor(md)),
+	}
+
+	if !opts.WithoutDefaultTags {
+		tagName := string(service.FullName())
+		if opts.ShortServiceTags {
+			tagName = string(service.Name())
+		}
+		op.Tags = []string{tagName}
 	}
 
 	fieldNamesInPath := map[string]struct{}{}
 	for _, param := range partsToParameter(tokens) {
+		// Skip the name parameter if it's part of a glob pattern
+		if strings.Contains(param, "=") {
+			continue
+		}
 		field, jsonPath := resolveField(md.Input(), param)
 		if field != nil {
 			// This field is only top level, so we will filter out the param from
@@ -111,29 +177,76 @@ func httpRuleToPathMap(opts options.Options, md protoreflect.MethodDescriptor, r
 			fieldNamesInPath[string(field.FullName())] = struct{}{}
 			fieldNamesInPath[strings.Join(jsonPath, ".")] = struct{}{} // sometimes JSON field names are used
 			loc := fd.SourceLocations().ByDescriptor(field)
-			op.Parameters = append(op.Parameters, &v3.Parameter{
+			newParameter := &v3.Parameter{
 				Name:        param,
 				Required:    proto.Bool(true),
 				In:          "path",
 				Description: util.FormatComments(loc),
 				Schema:      schema.FieldToSchema(opts, nil, field),
-			})
+			}
+			op.Parameters = mergeOrAppendParameter(op.Parameters, newParameter)
 		} else {
 			slog.Warn("path field not found", slog.String("param", param))
 		}
 	}
 
+	// Add named path parameters from glob patterns
+	for _, token := range tokens {
+		if token.Type == TokenVariable && strings.Contains(token.Value, "=") {
+			matches := namedPathPattern.FindStringSubmatch("{" + token.Value + "}")
+			if len(matches) == 3 {
+				// Store the original field name from the glob pattern to prevent it from appearing
+				// in both the path parameters and request body/query parameters
+				orignalName := matches[1]
+				fieldNamesInPath[orignalName] = struct{}{}
+				// Convert the path from the starred form to use named path parameters.
+				starredPath := matches[2]
+				parts := strings.Split(starredPath, "/")
+				// The starred path is assumed to be in the form "things/*/otherthings/*".
+				// We want to convert it to "things/{thingsId}/otherthings/{otherthingsId}".
+				for i := 0; i < len(parts)-1; i += 2 {
+					section := parts[i]
+					namedPathParameter := util.Singular(section)
+					// Add the parameter to the operation
+					newParameter := &v3.Parameter{
+						Name:        namedPathParameter,
+						In:          "path",
+						Required:    proto.Bool(true),
+						Description: "The " + namedPathParameter + " id.",
+						Schema:      base.CreateSchemaProxy(&base.Schema{Type: []string{"string"}}),
+					}
+					op.Parameters = mergeOrAppendParameter(op.Parameters, newParameter)
+				}
+			}
+		}
+	}
+
 	switch rule.Body {
 	case "":
-		op.Parameters = append(op.Parameters, flattenToParams(opts, md.Input(), "", fieldNamesInPath)...)
+		newQueryParams := flattenToParams(opts, md.Input(), "", fieldNamesInPath)
+		for _, newQueryParam := range newQueryParams {
+			op.Parameters = mergeOrAppendParameter(op.Parameters, newQueryParam)
+		}
 	case "*":
 		if len(fieldNamesInPath) > 0 {
 			_, s := schema.MessageToSchema(opts, md.Input())
-			for name := range fieldNamesInPath {
-				s.Properties.Delete(name)
-			}
-			if s.Properties.Len() > 0 {
-				op.RequestBody = util.MethodToRequestBody(opts, md, base.CreateSchemaProxy(s), false)
+			if s != nil && s.Properties != nil {
+				for name := range fieldNamesInPath {
+					s.Properties.Delete(name)
+					// Also remove from required list to prevent duplicate required properties
+					if s.Required != nil {
+						s.Required = slices.DeleteFunc(s.Required, func(s string) bool {
+							return s == name
+						})
+						// don't serialize []
+						if len(s.Required) == 0 {
+							s.Required = nil
+						}
+					}
+				}
+				if s.Properties.Len() > 0 {
+					op.RequestBody = util.MethodToRequestBody(opts, md, base.CreateSchemaProxy(s), false)
+				}
 			}
 		} else {
 			inputName := string(md.Input().FullName())
@@ -142,12 +255,32 @@ func httpRuleToPathMap(opts options.Options, md protoreflect.MethodDescriptor, r
 		}
 
 	default:
-		if field, _ := resolveField(md.Input(), rule.Body); field != nil {
+		if field, jsonPath := resolveField(md.Input(), rule.Body); field != nil {
 			loc := fd.SourceLocations().ByDescriptor(field)
 			bodySchema := schema.FieldToSchema(opts, nil, field)
 			op.RequestBody = &v3.RequestBody{
 				Description: util.FormatComments(loc),
 				Content:     util.MakeMediaTypes(opts, bodySchema, false, false),
+			}
+
+			// Add any unhandled fields in the request message as query parameters.
+			// This covers the case where body: "specific_field" is used, and any fields
+			// not in the path or body should become query parameters.
+			// This follows Google AIP-127 specification and matches the original gnostic behavior.
+			coveredFields := make(map[string]struct{})
+			for name := range fieldNamesInPath {
+				coveredFields[name] = struct{}{}
+			}
+			coveredFields[rule.Body] = struct{}{}
+			// Also exclude JSON name and descriptor name to prevent snake_case vs camelCase mismatch
+			coveredFields[field.JSONName()] = struct{}{}
+			coveredFields[string(field.FullName())] = struct{}{}
+			// If body is a nested path (a.b.c) also skip its JSON path
+			coveredFields[strings.Join(jsonPath, ".")] = struct{}{}
+
+			newQueryParams := flattenToParams(opts, md.Input(), "", coveredFields)
+			for _, newQueryParam := range newQueryParams {
+				op.Parameters = mergeOrAppendParameter(op.Parameters, newQueryParam)
 			}
 		} else {
 			slog.Warn("body field not found", slog.String("param", rule.Body))
@@ -178,7 +311,7 @@ func httpRuleToPathMap(opts options.Options, md protoreflect.MethodDescriptor, r
 			Description: "Error",
 			Content: util.MakeMediaTypes(
 				opts,
-				base.CreateSchemaProxyRef("#/components/schemas/lava.error"),
+				base.CreateSchemaProxyRef("#/components/schemas/connect.error"),
 				false,
 				false,
 			),
@@ -207,7 +340,26 @@ func httpRuleToPathMap(opts options.Options, md protoreflect.MethodDescriptor, r
 			paths.Set(path, pair.Value())
 		}
 	}
+	dedupeOperations(op.OperationId, paths.ValuesFromOldest())
 	return paths
+}
+
+// dedupeOperations assigns unique operation ids to additional bindings.
+// From the OpenAPI v3 spec: "The id MUST be unique among all operations described in the API."
+// Since the same gRPC method name is used for operationId, the additional bindings will not be unique,
+// so we append a number, starting at 2, when more than one path binds to the same method.
+func dedupeOperations(id string, value iter.Seq[*v3.PathItem]) {
+	num := 0
+	for path := range value {
+		for op := range path.GetOperations().ValuesFromOldest() {
+			if op.OperationId == id {
+				num++
+				if num > 1 {
+					op.OperationId = fmt.Sprintf("%s%d", id, num)
+				}
+			}
+		}
+	}
 }
 
 func resolveField(md protoreflect.MessageDescriptor, param string) (protoreflect.FieldDescriptor, []string) {
@@ -242,6 +394,10 @@ func partsToParameter(tokens []Token) []string {
 	params := []string{}
 	for _, token := range tokens {
 		if token.Type == TokenVariable {
+			// Skip parameters that contain = as they are part of a glob pattern
+			if strings.Contains(token.Value, "=") {
+				continue
+			}
 			params = append(params, strings.SplitN(token.Value, "=", 2)[0])
 		}
 	}
@@ -262,9 +418,34 @@ func partsToOpenAPIPath(tokens []Token) string {
 		case TokenIdent:
 			b.WriteString(token.Value)
 		case TokenVariable:
-			b.WriteByte('{')
-			b.WriteString(token.Value)
-			b.WriteByte('}')
+			// Handle the name= prefix by extracting just the path portion
+			if strings.Contains(token.Value, "=") {
+				matches := namedPathPattern.FindStringSubmatch("{" + token.Value + "}")
+				if len(matches) == 3 {
+					// Add the "name=" "name" value to the list of covered parameters.
+					// Convert the path from the starred form to use named path parameters.
+					starredPath := matches[2]
+					parts := strings.Split(starredPath, "/")
+					// The starred path is assumed to be in the form "things/*/otherthings/*".
+					// We want to convert it to "things/{thingsId}/otherthings/{otherthingsId}".
+					for i := 0; i < len(parts)-1; i += 2 {
+						section := parts[i]
+						namedPathParameter := util.Singular(section)
+						parts[i+1] = "{" + namedPathParameter + "}"
+					}
+					// Rewrite the path to use the path parameters.
+					newPath := strings.Join(parts, "/")
+					b.WriteString(newPath)
+				} else {
+					b.WriteByte('{')
+					b.WriteString(token.Value)
+					b.WriteByte('}')
+				}
+			} else {
+				b.WriteByte('{')
+				b.WriteString(token.Value)
+				b.WriteByte('}')
+			}
 		}
 	}
 	return b.String()

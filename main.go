@@ -58,7 +58,7 @@ func main() {
 		gen.SupportedEditionsMinimum = descriptorpb.Edition_EDITION_PROTO2
 		gen.SupportedEditionsMaximum = descriptorpb.Edition_EDITION_2024
 
-		return converter.Convert(gen, conf)
+		return converter.ConvertV1(gen, conf)
 	}
 	protogen.Options{ParamFunc: flagSet}.Run(runPlugin)
 }

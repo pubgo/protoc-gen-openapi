@@ -4,11 +4,11 @@ info:
   description: This is a service which says hello to you!
   contact:
     name: Ein
-    url: https://github.com/sudorandom/protoc-gen-connect-openapi
+    url: https://github.com/pubgo/protoc-gen-openapi
     email: ein@sudorandom.com
   license:
     name: MIT License
-    url: https://github.com/sudorandom/protoc-gen-connect-openapi/blob/master/LICENSE
+    url: https://github.com/pubgo/protoc-gen-openapi/blob/master/LICENSE
   version: v2
 paths:
   /example.basic.Greeter/SayHello:

@@ -1,7 +1,6 @@
 package converter
 
 import (
-	"fmt"
 	"log/slog"
 	"sort"
 	"strconv"
@@ -138,18 +137,10 @@ func (st *State) SortedMessages() []protoreflect.MessageDescriptor {
 
 func enumToSchema(state *State, tt protoreflect.EnumDescriptor) (string, *base.Schema) {
 	slog.Debug("enumToSchema", slog.Any("descriptor", tt.FullName()))
-	children := make([]*yaml.Node, 0)
+	children := []*yaml.Node{}
 	values := tt.Values()
-	desc := util.FormatComments(tt.ParentFile().SourceLocations().ByDescriptor(tt))
 	for i := 0; i < values.Len(); i++ {
 		value := values.Get(i)
-		comment := util.FormatComments(tt.ParentFile().SourceLocations().ByDescriptor(value))
-		if comment != "" {
-			desc += fmt.Sprintf("- %s: %s\n", value.Name(), comment)
-		} else {
-			desc += fmt.Sprintf("- %s\n", value.Name())
-		}
-
 		children = append(children, utils.CreateStringNode(string(value.Name())))
 		if state.Opts.IncludeNumberEnumValues {
 			children = append(children, utils.CreateIntNode(strconv.FormatInt(int64(value.Number()), 10)))
@@ -161,12 +152,10 @@ func enumToSchema(state *State, tt protoreflect.EnumDescriptor) (string, *base.S
 		title = string(tt.FullName())
 	}
 	s := &base.Schema{
-		Format:      "enum",
 		Title:       title,
-		Description: desc,
+		Description: util.FormatComments(tt.ParentFile().SourceLocations().ByDescriptor(tt)),
 		Type:        []string{"string"},
 		Enum:        children,
-		Default:     children[0],
 	}
 	return string(tt.FullName()), s
 }
@@ -175,14 +164,14 @@ func stateToSchema(st *State) *orderedmap.Map[string, *base.SchemaProxy] {
 	schemas := orderedmap.New[string, *base.SchemaProxy]()
 
 	for _, enum := range st.SortedEnums() {
-		id, s := enumToSchema(st, enum)
-		schemas.Set(id, base.CreateSchemaProxy(s))
+		id, schema := enumToSchemaV1(st, enum)
+		schemas.Set(id, base.CreateSchemaProxy(schema))
 	}
 
 	for _, message := range st.SortedMessages() {
-		id, s := schema.MessageToSchema(st.Opts, message)
-		if s != nil {
-			schemas.Set(id, base.CreateSchemaProxy(s))
+		id, schema := schema.MessageToSchema(st.Opts, message)
+		if schema != nil {
+			schemas.Set(id, base.CreateSchemaProxy(schema))
 		}
 	}
 

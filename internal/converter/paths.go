@@ -1,20 +1,15 @@
 package converter
 
 import (
-	openapiv3 "github.com/google/gnostic-models/openapiv3"
 	"github.com/pb33f/libopenapi/datamodel/high/base"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/orderedmap"
-	"github.com/samber/lo"
-	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/types/descriptorpb"
-	"gopkg.in/yaml.v3"
-
-	"github.com/pubgo/protoc-gen-openapi/generator"
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/gnostic"
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/googleapi"
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/options"
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/util"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/types/descriptorpb"
 )
 
 func addPathItemsFromFile(opts options.Options, fd protoreflect.FileDescriptor, paths *v3.Paths) error {
@@ -24,8 +19,6 @@ func addPathItemsFromFile(opts options.Options, fd protoreflect.FileDescriptor, 
 		if !opts.HasService(service.FullName()) {
 			continue
 		}
-
-		srv := googleapi.GetSrvOptions(opts, service)
 		methods := service.Methods()
 		for j := 0; j < methods.Len(); j++ {
 			method := methods.Get(j)
@@ -34,19 +27,12 @@ func addPathItemsFromFile(opts options.Options, fd protoreflect.FileDescriptor, 
 			// Helper function to update or set path items
 			addPathItem := func(path string, newItem *v3.PathItem) {
 				path = util.MakePath(opts, path)
-				if existing, ok := paths.PathItems.Get(path); ok {
-					newItem = mergePathItems(existing, newItem)
+				if existing, ok := paths.PathItems.Get(path); !ok {
+					paths.PathItems.Set(path, newItem)
+				} else {
+					mergePathItems(existing, newItem)
+					paths.PathItems.Set(path, existing)
 				}
-
-				mergeOperationV2(newItem.Get, srv)
-				mergeOperationV2(newItem.Put, srv)
-				mergeOperationV2(newItem.Post, srv)
-				mergeOperationV2(newItem.Delete, srv)
-				mergeOperationV2(newItem.Options, srv)
-				mergeOperationV2(newItem.Head, srv)
-				mergeOperationV2(newItem.Patch, srv)
-				mergeOperationV2(newItem.Trace, srv)
-				paths.PathItems.Set(path, newItem)
 			}
 
 			// Update path items from google.api annotations
@@ -66,11 +52,7 @@ func addPathItemsFromFile(opts options.Options, fd protoreflect.FileDescriptor, 
 	return nil
 }
 
-func mergePathItems(existing, new *v3.PathItem) *v3.PathItem {
-	if new == nil {
-		return existing
-	}
-
+func mergePathItems(existing, new *v3.PathItem) {
 	// Merge operations
 	operations := []struct {
 		existingOp **v3.Operation
@@ -96,11 +78,9 @@ func mergePathItems(existing, new *v3.PathItem) *v3.PathItem {
 	if new.Summary != "" {
 		existing.Summary = new.Summary
 	}
-
 	if new.Description != "" {
 		existing.Description = new.Description
 	}
-
 	existing.Servers = append(existing.Servers, new.Servers...)
 	existing.Parameters = append(existing.Parameters, new.Parameters...)
 
@@ -110,34 +90,6 @@ func mergePathItems(existing, new *v3.PathItem) *v3.PathItem {
 			existing.Extensions.Set(pair.Key(), pair.Value())
 		}
 	}
-	return existing
-}
-
-func mergeOperationV2(existing *v3.Operation, srv *generator.Service) {
-	if srv == nil || existing == nil {
-		return
-	}
-
-	existing.Tags = lo.Uniq(append(existing.Tags, srv.Tags...))
-	securityList := lo.Map(srv.Security, func(item *openapiv3.NamedStringArray, index int) *openapiv3.SecurityRequirement {
-		return &openapiv3.SecurityRequirement{AdditionalProperties: []*openapiv3.NamedStringArray{item}}
-	})
-	existing.Security = append(existing.Security, gnostic.ToSecurityRequirements(securityList)...)
-	existing.Servers = append(existing.Servers, gnostic.ToServers(srv.Servers)...)
-	existing.Parameters = append(existing.Parameters, gnostic.ToParameter(srv.Parameters)...)
-
-	ext := gnostic.ToExtensions(srv.Extensions)
-	if ext == nil {
-		ext = orderedmap.New[string, *yaml.Node]()
-	}
-
-	if existing.Extensions == nil {
-		existing.Extensions = ext
-	}
-
-	for pair := ext.First(); pair != nil; pair = pair.Next() {
-		existing.Extensions.Set(pair.Key(), pair.Value())
-	}
 }
 
 func mergeOperation(existing **v3.Operation, new *v3.Operation) {
@@ -145,26 +97,21 @@ func mergeOperation(existing **v3.Operation, new *v3.Operation) {
 		*existing = new
 		return
 	}
-
 	// Merge operation fields
 	if new.Summary != "" {
 		(*existing).Summary = new.Summary
 	}
-
 	if new.Description != "" {
 		(*existing).Description = new.Description
 	}
-
 	(*existing).Tags = append((*existing).Tags, new.Tags...)
 	(*existing).Parameters = append((*existing).Parameters, new.Parameters...)
 	if new.RequestBody != nil {
 		(*existing).RequestBody = new.RequestBody
 	}
-
 	if new.Responses != nil {
 		mergeResponses((*existing).Responses, new.Responses)
 	}
-
 	if new.Deprecated != nil {
 		(*existing).Deprecated = new.Deprecated
 	}
@@ -174,7 +121,6 @@ func mergeOperation(existing **v3.Operation, new *v3.Operation) {
 		if (*existing).Callbacks == nil {
 			(*existing).Callbacks = orderedmap.New[string, *v3.Callback]()
 		}
-
 		for pair := new.Callbacks.First(); pair != nil; pair = pair.Next() {
 			if _, ok := (*existing).Callbacks.Get(pair.Key()); !ok {
 				(*existing).Callbacks.Set(pair.Key(), pair.Value())
@@ -273,15 +219,25 @@ func mergeResponse(existing, new *v3.Response) {
 	}
 }
 
-func methodToOperation(opts options.Options, method protoreflect.MethodDescriptor, returnGet bool) *v3.Operation {
+func methodToOperaton(opts options.Options, method protoreflect.MethodDescriptor, returnGet bool) *v3.Operation {
 	fd := method.ParentFile()
 	service := method.Parent().(protoreflect.ServiceDescriptor)
 	loc := fd.SourceLocations().ByDescriptor(method)
+	tagName := string(service.FullName())
+	if opts.ShortServiceTags {
+		tagName = string(service.Name())
+	}
+
+	operationId := string(method.FullName())
+	if opts.ShortOperationIds {
+		operationId = string(service.Name()) + "_" + string(method.Name())
+	}
+
 	op := &v3.Operation{
 		Summary:     string(method.Name()),
-		OperationId: string(method.FullName()),
+		OperationId: operationId,
 		Deprecated:  util.IsMethodDeprecated(method),
-		Tags:        []string{string(service.FullName())},
+		Tags:        []string{tagName},
 		Description: util.FormatComments(loc),
 	}
 
@@ -308,7 +264,7 @@ func methodToOperation(opts options.Options, method protoreflect.MethodDescripto
 			Description: "Error",
 			Content: util.MakeMediaTypes(
 				opts,
-				base.CreateSchemaProxyRef("#/components/schemas/lava.error"),
+				base.CreateSchemaProxyRef("#/components/schemas/connect.error"),
 				false,
 				isStreaming,
 			),
@@ -384,9 +340,9 @@ func methodToPathItem(opts options.Options, method protoreflect.MethodDescriptor
 	hasGetSupport := methodHasGet(opts, method)
 	item := &v3.PathItem{}
 	if hasGetSupport {
-		item.Get = methodToOperation(opts, method, true)
+		item.Get = methodToOperaton(opts, method, true)
 	}
-	item.Post = methodToOperation(opts, method, false)
+	item.Post = methodToOperaton(opts, method, false)
 	item = gnostic.PathItemWithMethodAnnotations(item, method)
 
 	return item
@@ -401,6 +357,6 @@ func methodHasGet(opts options.Options, method protoreflect.MethodDescriptor) bo
 		return false
 	}
 
-	methodOptions := method.Options().(*descriptorpb.MethodOptions)
-	return methodOptions.GetIdempotencyLevel() == descriptorpb.MethodOptions_NO_SIDE_EFFECTS
+	options := method.Options().(*descriptorpb.MethodOptions)
+	return options.GetIdempotencyLevel() == descriptorpb.MethodOptions_NO_SIDE_EFFECTS
 }

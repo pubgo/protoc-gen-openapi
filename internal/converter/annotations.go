@@ -2,12 +2,11 @@ package converter
 
 import (
 	"github.com/pb33f/libopenapi/datamodel/high/base"
-	"google.golang.org/protobuf/reflect/protoreflect"
-
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/gnostic"
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/googleapi"
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/options"
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/protovalidate"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type annotator struct{}

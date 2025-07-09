@@ -2,12 +2,11 @@ package googleapi
 
 import (
 	"github.com/pb33f/libopenapi/datamodel/high/base"
+	"github.com/pubgo/protoc-gen-openapi/internal/converter/options"
+	"github.com/pubgo/protoc-gen-openapi/internal/converter/util"
 	"google.golang.org/genproto/googleapis/api/annotations"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
-
-	"github.com/pubgo/protoc-gen-openapi/internal/converter/options"
-	"github.com/pubgo/protoc-gen-openapi/internal/converter/util"
 )
 
 func SchemaWithPropertyAnnotations(opts options.Options, schema *base.Schema, desc protoreflect.FieldDescriptor) *base.Schema {

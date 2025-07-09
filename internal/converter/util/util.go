@@ -7,10 +7,9 @@ import (
 	"github.com/pb33f/libopenapi/datamodel/high/base"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/orderedmap"
+	"github.com/pubgo/protoc-gen-openapi/internal/converter/options"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
-
-	"github.com/pubgo/protoc-gen-openapi/internal/converter/options"
 )
 
 func AppendComponents(spec *v3.Document, components *v3.Components) {
@@ -64,23 +63,17 @@ func TypeFieldDescription(opts options.Options, tt protoreflect.FieldDescriptor)
 	return b.String()
 }
 
-func trimComment(comment string) string {
-	return strings.TrimSpace(strings.Trim(strings.TrimSpace(comment), "/"))
-}
-
 func FormatComments(loc protoreflect.SourceLocation) string {
 	var builder strings.Builder
 	if loc.LeadingComments != "" {
 		builder.WriteString(strings.TrimSpace(loc.LeadingComments))
 		builder.WriteString(" ")
 	}
-
 	if loc.TrailingComments != "" {
 		builder.WriteString(strings.TrimSpace(loc.TrailingComments))
 		builder.WriteString(" ")
 	}
-
-	return trimComment(strings.TrimSpace(builder.String()))
+	return strings.TrimSpace(builder.String())
 }
 
 func BoolPtr(b bool) *bool {
@@ -92,29 +85,25 @@ func FormatTypeRef(t string) string {
 }
 
 func IsMethodDeprecated(md protoreflect.MethodDescriptor) *bool {
-	methodOptions, ok := md.Options().(*descriptorpb.MethodOptions)
-	if !ok || methodOptions == nil {
+	options, ok := md.Options().(*descriptorpb.MethodOptions)
+	if !ok || options == nil {
 		return nil
 	}
-
-	if methodOptions.Deprecated == nil {
+	if options.Deprecated == nil {
 		return nil
 	}
-
-	return methodOptions.Deprecated
+	return options.Deprecated
 }
 
 func IsFieldDeprecated(fd protoreflect.FieldDescriptor) *bool {
-	fieldOptions, ok := fd.Options().(*descriptorpb.FieldOptions)
-	if !ok || fieldOptions == nil {
+	options, ok := fd.Options().(*descriptorpb.FieldOptions)
+	if !ok || options == nil {
 		return nil
 	}
-
-	if fieldOptions.Deprecated == nil {
+	if options.Deprecated == nil {
 		return nil
 	}
-
-	return fieldOptions.Deprecated
+	return options.Deprecated
 }
 
 func MethodToRequestBody(opts options.Options, method protoreflect.MethodDescriptor, s *base.SchemaProxy, isStreaming bool) *v3.RequestBody {
@@ -134,7 +123,7 @@ func MakeMediaTypes(opts options.Options, s *base.SchemaProxy, isRequest, isStre
 		}
 
 		_, shouldUse := opts.ContentTypes[protocol.Name]
-		if !(isStreaming || shouldUse) {
+		if !isStreaming && !shouldUse {
 			continue
 		}
 
@@ -154,11 +143,26 @@ func MakePath(opts options.Options, main string) string {
 	return path.Join(opts.PathPrefix, main)
 }
 
-func AppendStringDedupe(strList []string, str string) []string {
-	for _, s := range strList {
+func AppendStringDedupe(strs []string, str string) []string {
+	for _, s := range strs {
 		if str == s {
-			return strList
+			return strs
 		}
 	}
-	return append(strList, str)
+	return append(strs, str)
+}
+
+// Singular returns the singular form of a given plural noun. .
+func Singular(plural string) string {
+
+	if strings.HasSuffix(plural, "ves") {
+		return strings.TrimSuffix(plural, "ves") + "f"
+	}
+	if strings.HasSuffix(plural, "ies") {
+		return strings.TrimSuffix(plural, "ies") + "y"
+	}
+	if strings.HasSuffix(plural, "s") {
+		return strings.TrimSuffix(plural, "s")
+	}
+	return plural
 }

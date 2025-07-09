@@ -3,7 +3,9 @@ package util
 import (
 	"github.com/pb33f/libopenapi/datamodel/high/base"
 	"github.com/pb33f/libopenapi/orderedmap"
+	"github.com/pb33f/libopenapi/utils"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	"gopkg.in/yaml.v3"
 )
 
 var wellKnownToSchemaFns = map[string]func(protoreflect.MessageDescriptor) *IDSchema{
@@ -11,7 +13,7 @@ var wellKnownToSchemaFns = map[string]func(protoreflect.MessageDescriptor) *IDSc
 	"google.protobuf.Timestamp": googleTimestamp,
 	"google.protobuf.Empty":     googleEmpty,
 	"google.protobuf.Any":       func(_ protoreflect.MessageDescriptor) *IDSchema { return NewGoogleAny() },
-	"google.protobuf.FieldMask": googleFieldMask,
+	"google.protobuf.FieldMask": googleFieldmask,
 
 	// google.protobuf.[Type]Value
 	"google.protobuf.Struct":      googleStruct,
@@ -52,8 +54,7 @@ func googleDuration(msg protoreflect.MessageDescriptor) *IDSchema {
 		Schema: &base.Schema{
 			Description: FormatComments(msg.ParentFile().SourceLocations().ByDescriptor(msg)),
 			Type:        []string{"string"},
-			Format:      "regex",
-			Pattern:     `^[-\+]?([0-9]+\.?[0-9]*|\.[0-9]+)s$`,
+			Format:      "duration",
 		},
 	}
 }
@@ -65,6 +66,10 @@ func googleTimestamp(msg protoreflect.MessageDescriptor) *IDSchema {
 			Description: FormatComments(msg.ParentFile().SourceLocations().ByDescriptor(msg)),
 			Type:        []string{"string"},
 			Format:      "date-time",
+			Examples: []*yaml.Node{
+				utils.CreateStringNode("1s"),
+				utils.CreateStringNode("1.000340012s"),
+			},
 		},
 	}
 }
@@ -199,7 +204,7 @@ func NewGoogleAny() *IDSchema {
 	}
 }
 
-func googleFieldMask(msg protoreflect.MessageDescriptor) *IDSchema {
+func googleFieldmask(msg protoreflect.MessageDescriptor) *IDSchema {
 	return &IDSchema{
 		ID: string(msg.FullName()),
 		Schema: &base.Schema{

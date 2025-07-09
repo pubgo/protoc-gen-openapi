@@ -1,3 +1,0 @@
-syntax = "proto3";
-
-package with_base.empty;

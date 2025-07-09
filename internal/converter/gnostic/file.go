@@ -18,7 +18,6 @@ func SpecWithFileAnnotations(spec *highv3.Document, fd protoreflect.FileDescript
 	if !ok {
 		return
 	}
-
 	if opts.Openapi != "" {
 		spec.Info.Version = opts.Openapi
 	}
@@ -43,14 +42,14 @@ func SpecWithFileAnnotations(spec *highv3.Document, fd protoreflect.FileDescript
 		}
 		spec.Info.Version = opts.Info.Version
 	}
-	spec.Servers = append(spec.Servers, ToServers(opts.Servers)...)
-	spec.Security = append(spec.Security, ToSecurityRequirements(opts.Security)...)
+	spec.Servers = append(spec.Servers, toServers(opts.Servers)...)
+	spec.Security = append(spec.Security, toSecurityRequirements(opts.Security)...)
 	spec.Tags = append(spec.Tags, toTags(opts.Tags)...)
 	if exDocs := toExternalDocs(opts.ExternalDocs); exDocs != nil {
 		spec.ExternalDocs = exDocs
 	}
 	if opts.SpecificationExtension != nil {
-		ext := ToExtensions(opts.SpecificationExtension)
+		ext := toExtensions(opts.SpecificationExtension)
 		for pair := ext.Oldest(); pair != nil; pair = pair.Next() {
 			spec.Extensions.AddPairs(*pair)
 		}
