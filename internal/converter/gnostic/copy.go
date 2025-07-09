@@ -67,6 +67,7 @@ func toParameterV1(paramOrRef *goa3.ParameterOrReference) *v3.Parameter {
 	if paramOrRef == nil || paramOrRef.GetParameter() == nil {
 		return nil
 	}
+
 	param := paramOrRef.GetParameter()
 	p := &v3.Parameter{
 		Name:            param.GetName(),

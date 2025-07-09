@@ -149,10 +149,10 @@ func mergeOperationV2(existing *v3.Operation, srv *generator.Service) {
 
 	if existing.Extensions == nil {
 		existing.Extensions = ext
-	}
-
-	for pair := ext.First(); pair != nil; pair = pair.Next() {
-		existing.Extensions.Set(pair.Key(), pair.Value())
+	} else {
+		for pair := ext.First(); pair != nil; pair = pair.Next() {
+			existing.Extensions.Set(pair.Key(), pair.Value())
+		}
 	}
 }
 

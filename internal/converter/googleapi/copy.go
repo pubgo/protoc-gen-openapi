@@ -8,12 +8,8 @@ import (
 )
 
 func GetSrvOptions(opts options.Options, serviceDescriptor protoreflect.ServiceDescriptor) *generator.Service {
-	if opts.IgnoreGoogleapiHTTP {
-		return nil
-	}
-
 	srvOpts := serviceDescriptor.Options()
-	if !proto.HasExtension(srvOpts, generator.E_Service) {
+	if srvOpts == nil || !proto.HasExtension(srvOpts, generator.E_Service) {
 		return nil
 	}
 
