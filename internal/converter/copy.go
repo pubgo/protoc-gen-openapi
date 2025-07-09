@@ -197,6 +197,8 @@ func mergePathItemsV1(existing, new *v3.PathItem) *v3.PathItem {
 	return existing
 }
 
+var _ = addPathItemsFromFile
+
 func addPathItemsFromFileV1(opts options.Options, fd protoreflect.FileDescriptor, paths *v3.Paths) error {
 	services := fd.Services()
 	for i := 0; i < services.Len(); i++ {
@@ -222,10 +224,7 @@ func addPathItemsFromFileV1(opts options.Options, fd protoreflect.FileDescriptor
 				mergeOperationV2(newItem.Put, srv)
 				mergeOperationV2(newItem.Post, srv)
 				mergeOperationV2(newItem.Delete, srv)
-				mergeOperationV2(newItem.Options, srv)
-				mergeOperationV2(newItem.Head, srv)
 				mergeOperationV2(newItem.Patch, srv)
-				mergeOperationV2(newItem.Trace, srv)
 				paths.PathItems.Set(path, newItem)
 			}
 
