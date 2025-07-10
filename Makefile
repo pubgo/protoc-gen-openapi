@@ -9,8 +9,8 @@ protobuf:
 	rm -rf github.com
 
 protobuf_test:
-	protobuild vendor -c protobuf_test.yaml
-	protobuild gen -c protobuf_test.yaml
+	protobuild vendor -c protobuf_auth_base.yaml
+	protobuild gen -c protobuf_auth_base.yaml
 
 install:
 	go install .

@@ -1,10 +1,7 @@
 checksum: 5db5260814d43a77f717e6308ba54d8f8c802bf1
 vendor: proto-vendor
-base:
-  paths: import
-  out: ./examples/openapi
 root:
-  - examples
+  - internal/converter/testdata
 includes:
   - proto
 deps:
@@ -20,3 +17,7 @@ deps:
     version: v0.11.0
 plugins:
   - name: openapi
+    opt:
+      - base=auth-base.yaml
+      - content-types=json
+      - debug=true
