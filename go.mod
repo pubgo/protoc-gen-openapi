@@ -10,7 +10,7 @@ require (
 	github.com/lmittmann/tint v1.0.7
 	github.com/pb33f/libopenapi v0.22.2
 	github.com/pb33f/libopenapi-validator v0.4.7
-	github.com/pubgo/funk v0.5.67
+	github.com/pubgo/funk v0.5.68
 	github.com/samber/lo v1.51.0
 	github.com/stretchr/testify v1.10.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250218202821-56aae31c358a

@@ -10,7 +10,23 @@ import (
 )
 
 func ToSecurityRequirements(securityReq []*goa3.SecurityRequirement) []*base.SecurityRequirement {
-	return toSecurityRequirements(securityReq)
+	result := make([]*base.SecurityRequirement, len(securityReq))
+	for i, req := range securityReq {
+		reqs := orderedmap.New[string, []string]()
+		for _, prop := range req.AdditionalProperties {
+			var val []string
+			if prop.Value != nil {
+				val = prop.Value.Value
+			}
+			reqs.Set(prop.Name, val)
+		}
+
+		result[i] = &base.SecurityRequirement{
+			Requirements:             reqs,
+			ContainsEmptyRequirement: len(req.AdditionalProperties) == 0,
+		}
+	}
+	return result
 }
 
 func ToServers(servers []*goa3.Server) []*v3.Server {
