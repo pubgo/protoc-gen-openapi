@@ -1,0 +1,552 @@
+openapi: 3.1.0
+info:
+  title: flex
+  description: |-
+    ## flex.FlexService
+
+    This service tries to flex the different options
+paths:
+  /flex.FlexService/NormalRPC:
+    post:
+      tags:
+        - flex.FlexService
+      summary: NormalRPC
+      description: Normal RPC method
+      operationId: flex.FlexService.NormalRPC
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/flex.FlexRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/flex.FlexReply'
+  /flex.FlexService/ClientStream:
+    post:
+      tags:
+        - flex.FlexService
+      summary: ClientStream
+      description: Stream from client to server
+      operationId: flex.FlexService.ClientStream
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/connect+json:
+            schema:
+              $ref: '#/components/schemas/flex.FlexRequest'
+          application/connect+proto:
+            schema:
+              $ref: '#/components/schemas/flex.FlexRequest'
+          application/grpc:
+            schema:
+              $ref: '#/components/schemas/flex.FlexRequest'
+          application/grpc+proto:
+            schema:
+              $ref: '#/components/schemas/flex.FlexRequest'
+          application/grpc+json:
+            schema:
+              $ref: '#/components/schemas/flex.FlexRequest'
+          application/grpc-web:
+            schema:
+              $ref: '#/components/schemas/flex.FlexRequest'
+          application/grpc-web+proto:
+            schema:
+              $ref: '#/components/schemas/flex.FlexRequest'
+          application/grpc-web+json:
+            schema:
+              $ref: '#/components/schemas/flex.FlexRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/connect+json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+            application/connect+proto:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+            application/grpc:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+            application/grpc+proto:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+            application/grpc+json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+            application/grpc-web:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+            application/grpc-web+proto:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+            application/grpc-web+json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/connect+json:
+              schema:
+                $ref: '#/components/schemas/flex.FlexReply'
+            application/connect+proto:
+              schema:
+                $ref: '#/components/schemas/flex.FlexReply'
+            application/grpc:
+              schema:
+                $ref: '#/components/schemas/flex.FlexReply'
+            application/grpc+proto:
+              schema:
+                $ref: '#/components/schemas/flex.FlexReply'
+            application/grpc+json:
+              schema:
+                $ref: '#/components/schemas/flex.FlexReply'
+            application/grpc-web:
+              schema:
+                $ref: '#/components/schemas/flex.FlexReply'
+            application/grpc-web+proto:
+              schema:
+                $ref: '#/components/schemas/flex.FlexReply'
+            application/grpc-web+json:
+              schema:
+                $ref: '#/components/schemas/flex.FlexReply'
+  /flex.FlexService/ServerStream:
+    post:
+      tags:
+        - flex.FlexService
+      summary: ServerStream
+      description: Stream from server to client
+      operationId: flex.FlexService.ServerStream
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/connect+json:
+            schema:
+              $ref: '#/components/schemas/flex.FlexRequest'
+          application/connect+proto:
+            schema:
+              $ref: '#/components/schemas/flex.FlexRequest'
+          application/grpc:
+            schema:
+              $ref: '#/components/schemas/flex.FlexRequest'
+          application/grpc+proto:
+            schema:
+              $ref: '#/components/schemas/flex.FlexRequest'
+          application/grpc+json:
+            schema:
+              $ref: '#/components/schemas/flex.FlexRequest'
+          application/grpc-web:
+            schema:
+              $ref: '#/components/schemas/flex.FlexRequest'
+          application/grpc-web+proto:
+            schema:
+              $ref: '#/components/schemas/flex.FlexRequest'
+          application/grpc-web+json:
+            schema:
+              $ref: '#/components/schemas/flex.FlexRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/connect+json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+            application/connect+proto:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+            application/grpc:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+            application/grpc+proto:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+            application/grpc+json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+            application/grpc-web:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+            application/grpc-web+proto:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+            application/grpc-web+json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/connect+json:
+              schema:
+                $ref: '#/components/schemas/flex.FlexReply'
+            application/connect+proto:
+              schema:
+                $ref: '#/components/schemas/flex.FlexReply'
+            application/grpc:
+              schema:
+                $ref: '#/components/schemas/flex.FlexReply'
+            application/grpc+proto:
+              schema:
+                $ref: '#/components/schemas/flex.FlexReply'
+            application/grpc+json:
+              schema:
+                $ref: '#/components/schemas/flex.FlexReply'
+            application/grpc-web:
+              schema:
+                $ref: '#/components/schemas/flex.FlexReply'
+            application/grpc-web+proto:
+              schema:
+                $ref: '#/components/schemas/flex.FlexReply'
+            application/grpc-web+json:
+              schema:
+                $ref: '#/components/schemas/flex.FlexReply'
+  /flex.FlexService/BiDirectorionalStream:
+    post:
+      tags:
+        - flex.FlexService
+      summary: BiDirectorionalStream
+      description: Stream both ways
+      operationId: flex.FlexService.BiDirectorionalStream
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/connect+json:
+            schema:
+              $ref: '#/components/schemas/flex.FlexRequest'
+          application/connect+proto:
+            schema:
+              $ref: '#/components/schemas/flex.FlexRequest'
+          application/grpc:
+            schema:
+              $ref: '#/components/schemas/flex.FlexRequest'
+          application/grpc+proto:
+            schema:
+              $ref: '#/components/schemas/flex.FlexRequest'
+          application/grpc+json:
+            schema:
+              $ref: '#/components/schemas/flex.FlexRequest'
+          application/grpc-web:
+            schema:
+              $ref: '#/components/schemas/flex.FlexRequest'
+          application/grpc-web+proto:
+            schema:
+              $ref: '#/components/schemas/flex.FlexRequest'
+          application/grpc-web+json:
+            schema:
+              $ref: '#/components/schemas/flex.FlexRequest'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/connect+json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+            application/connect+proto:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+            application/grpc:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+            application/grpc+proto:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+            application/grpc+json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+            application/grpc-web:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+            application/grpc-web+proto:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+            application/grpc-web+json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/connect+json:
+              schema:
+                $ref: '#/components/schemas/flex.FlexReply'
+            application/connect+proto:
+              schema:
+                $ref: '#/components/schemas/flex.FlexReply'
+            application/grpc:
+              schema:
+                $ref: '#/components/schemas/flex.FlexReply'
+            application/grpc+proto:
+              schema:
+                $ref: '#/components/schemas/flex.FlexReply'
+            application/grpc+json:
+              schema:
+                $ref: '#/components/schemas/flex.FlexReply'
+            application/grpc-web:
+              schema:
+                $ref: '#/components/schemas/flex.FlexReply'
+            application/grpc-web+proto:
+              schema:
+                $ref: '#/components/schemas/flex.FlexReply'
+            application/grpc-web+json:
+              schema:
+                $ref: '#/components/schemas/flex.FlexReply'
+  /flex.FlexService/EmptyRPC:
+    post:
+      tags:
+        - flex.FlexService
+      summary: EmptyRPC
+      description: Don't send or receive anything
+      operationId: flex.FlexService.EmptyRPC
+      parameters:
+        - name: Connect-Protocol-Version
+          in: header
+          required: true
+          schema:
+            $ref: '#/components/schemas/connect-protocol-version'
+        - name: Connect-Timeout-Ms
+          in: header
+          schema:
+            $ref: '#/components/schemas/connect-timeout-header'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/google.protobuf.Empty'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/google.protobuf.Empty'
+components:
+  schemas:
+    flex.ComplexType:
+      type: object
+      properties:
+        doubleField:
+          type: number
+          title: doubleField
+          format: double
+        floatField:
+          type: number
+          title: floatField
+          format: float
+        int32Field:
+          type: integer
+          title: int32Field
+          format: int32
+        int64Field:
+          type:
+            - integer
+            - string
+          title: int64Field
+          format: int64
+        uint32Field:
+          type: integer
+          title: uint32Field
+        uint64Field:
+          type:
+            - integer
+            - string
+          title: uint64Field
+          format: int64
+        sint32Field:
+          type: integer
+          title: sint32Field
+          format: int32
+        sint64Field:
+          type:
+            - integer
+            - string
+          title: sint64Field
+          format: int64
+        fixed32Field:
+          type: integer
+          title: fixed32Field
+        fixed64Field:
+          type:
+            - integer
+            - string
+          title: fixed64Field
+          format: int64
+        sfixed32Field:
+          type: integer
+          title: sfixed32Field
+          format: int32
+        sfixed64Field:
+          type:
+            - integer
+            - string
+          title: sfixed64Field
+          format: int64
+        boolField:
+          type: boolean
+          title: boolField
+        stringField:
+          type: string
+          title: stringField
+        msgField:
+          title: msgField
+          $ref: '#/components/schemas/flex.Other'
+        repeatedMsgField:
+          type: array
+          items:
+            $ref: '#/components/schemas/flex.Other'
+          title: repeatedMsgField
+        optionalMsgField:
+          title: optionalMsgField
+          nullable: true
+          $ref: '#/components/schemas/flex.Other'
+      title: ComplexType
+      additionalProperties: false
+      description: Type that has a bunch of different types
+    flex.FlexReply:
+      type: object
+      properties:
+        msg:
+          title: msg
+          $ref: '#/components/schemas/flex.ComplexType'
+      title: FlexReply
+      additionalProperties: false
+      description: The response message containing the greetings
+    flex.FlexRequest:
+      type: object
+      properties:
+        msg:
+          title: msg
+          $ref: '#/components/schemas/flex.ComplexType'
+      title: FlexRequest
+      additionalProperties: false
+      description: The request message containing the user's name.
+    flex.Other:
+      type: object
+      title: Other
+      additionalProperties: false
+    google.protobuf.Empty:
+      type: object
+      description: |-
+        A generic empty message that you can re-use to avoid defining duplicated
+         empty messages in your APIs. A typical example is to use it as the request
+         or the response type of an API method. For instance:
+
+             service Foo {
+               rpc Bar(google.protobuf.Empty) returns (google.protobuf.Empty);
+             }
+    connect-protocol-version:
+      type: number
+      title: Connect-Protocol-Version
+      enum:
+        - 1
+      description: Define the version of the Connect protocol
+      const: 1
+    connect-timeout-header:
+      type: number
+      title: Connect-Timeout-Ms
+      description: Define the timeout, in ms
+    connect.error:
+      type: object
+      properties:
+        code:
+          type: string
+          examples:
+            - not_found
+          enum:
+            - canceled
+            - unknown
+            - invalid_argument
+            - deadline_exceeded
+            - not_found
+            - already_exists
+            - permission_denied
+            - resource_exhausted
+            - failed_precondition
+            - aborted
+            - out_of_range
+            - unimplemented
+            - internal
+            - unavailable
+            - data_loss
+            - unauthenticated
+          description: The status code, which should be an enum value of [google.rpc.Code][google.rpc.Code].
+        message:
+          type: string
+          description: A developer-facing error message, which should be in English. Any user-facing error message should be localized and sent in the [google.rpc.Status.details][google.rpc.Status.details] field, or localized by the client.
+        detail:
+          $ref: '#/components/schemas/google.protobuf.Any'
+      title: Connect Error
+      additionalProperties: true
+      description: 'Error type returned by Connect: https://connectrpc.com/docs/go/errors/#http-representation'
+    google.protobuf.Any:
+      type: object
+      properties:
+        type:
+          type: string
+        value:
+          type: string
+          format: binary
+        debug:
+          type: object
+          additionalProperties: true
+      additionalProperties: true
+      description: Contains an arbitrary serialized message along with a @type that describes the type of the serialized message.
+security: []
+tags:
+  - name: flex.FlexService
+    description: This service tries to flex the different options

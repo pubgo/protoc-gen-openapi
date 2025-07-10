@@ -1,0 +1,8 @@
+version: v2
+deps:
+  - buf.build/protocolbuffers/wellknowntypes
+  - buf.build/gimletlabs/tensorflow
+  - buf.build/envoyproxy/envoy
+  - buf.build/gnostic/gnostic
+  - buf.build/bufbuild/protovalidate
+  - buf.build/googleapis/googleapis
