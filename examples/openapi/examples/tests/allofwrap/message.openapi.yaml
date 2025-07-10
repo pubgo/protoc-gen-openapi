@@ -1,0 +1,144 @@
+openapi: 3.1.0
+info:
+  title: tests.allofwrap.message.v1
+paths:
+  /v1/messages/{message_id}:
+    patch:
+      tags:
+        - tests.allofwrap.message.v1.Messaging
+      summary: UpdateMessage
+      operationId: tests.allofwrap.message.v1.Messaging.UpdateMessage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/tests.allofwrap.message.v1.Message'
+          application/proto:
+            schema:
+              $ref: '#/components/schemas/tests.allofwrap.message.v1.Message'
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/lava.error'
+            application/proto:
+              schema:
+                $ref: '#/components/schemas/lava.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tests.allofwrap.message.v1.Message'
+components:
+  schemas:
+    tests.allofwrap.message.v1.Message:
+      type: object
+      properties:
+        sub:
+          title: sub
+          $ref: '#/components/schemas/tests.allofwrap.message.v1.Message.Sub'
+        subInput:
+          title: sub_input
+          writeOnly: true
+          $ref: '#/components/schemas/tests.allofwrap.message.v1.Message.Sub'
+        subOutput:
+          title: sub_output
+          readOnly: true
+          $ref: '#/components/schemas/tests.allofwrap.message.v1.Message.Sub'
+        subDesc:
+          title: sub_desc
+          description: this sub has a description
+          $ref: '#/components/schemas/tests.allofwrap.message.v1.Message.Sub'
+        subs:
+          type: array
+          items:
+            $ref: '#/components/schemas/tests.allofwrap.message.v1.Message.Sub'
+          title: subs
+          description: test repeated, should not allof wrapped
+          readOnly: true
+      title: Message
+      additionalProperties: false
+    tests.allofwrap.message.v1.Message.Sub:
+      type: object
+      properties:
+        content:
+          type: string
+          title: content
+      title: Sub
+      additionalProperties: false
+    lava-protocol-version:
+      type: number
+      title: Lava-Protocol-Version
+      enum:
+        - 1
+      description: Define the version of the Lava protocol
+      const: 1
+    Lava-timeout-header:
+      type: number
+      title: Lava-Timeout-Ms
+      description: Define the timeout, in ms
+    lava.error:
+      type: object
+      properties:
+        status_code:
+          type: string
+          examples:
+            - OK
+          title: status code
+          format: enum
+          enum:
+            - OK
+            - Canceled
+            - InvalidArgument
+            - DeadlineExceeded
+            - NotFound
+            - AlreadyExists
+            - PermissionDenied
+            - ResourceExhausted
+            - FailedPrecondition
+            - Aborted
+            - OutOfRange
+            - Unimplemented
+            - Internal
+            - Unavailable
+            - DataLoss
+            - Unauthenticated
+          description: GRPC code corresponding to HTTP status code, which can be converted to each other
+        name:
+          type: string
+          description: Error name, e.g. lava.auth.token_not_found.
+        message:
+          type: string
+          description: Error message, e.g. token not found
+        code:
+          type: number
+          description: Business Code, e.g. 200001
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/google.protobuf.Any'
+          title: details
+          description: Error detail include request or other user defined information
+      title: Lava Error
+      additionalProperties: true
+      description: 'Error type returned by lava: https://github.com/pubgo/funk/blob/master/proto/errorpb/errors.proto'
+    google.protobuf.Any:
+      type: object
+      properties:
+        type:
+          type: string
+        value:
+          type: string
+          format: binary
+        debug:
+          type: object
+          additionalProperties: true
+      additionalProperties: true
+      description: Contains an arbitrary serialized message along with a @type that describes the type of the serialized message.
+security: []
+tags:
+  - name: tests.allofwrap.message.v1.Messaging

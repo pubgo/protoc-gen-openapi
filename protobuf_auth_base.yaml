@@ -1,7 +1,7 @@
 checksum: 5db5260814d43a77f717e6308ba54d8f8c802bf1
 vendor: proto-vendor
 root:
-  - internal/converter/testdata
+  - examples
 includes:
   - proto
 deps:

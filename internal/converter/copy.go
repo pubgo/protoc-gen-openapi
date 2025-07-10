@@ -32,7 +32,9 @@ import (
 )
 
 func ConvertV1(gen *protogen.Plugin, cfg options.Config) error {
-	defer recovery.Exit()
+	defer recovery.Recovery(func(err error) {
+		slog.Error(err.Error())
+	})
 
 	opts := assert.Must1(cfg.ToOptions())
 
