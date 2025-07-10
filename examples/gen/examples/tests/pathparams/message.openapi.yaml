@@ -1,0 +1,270 @@
+openapi: 3.1.0
+info:
+  title: tests.pathparams.message.v1
+  version: v1.0.0
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    tests.pathparams.message.v1.Comment:
+      type: object
+      properties:
+        commentId:
+          type: string
+          title: comment_id
+        userId:
+          type:
+            - integer
+            - string
+          title: user_id
+          format: int64
+        content:
+          type: string
+          title: content
+      title: Comment
+      additionalProperties: false
+    tests.pathparams.message.v1.GetMessageRequest:
+      type: object
+      properties:
+        messageId:
+          type: string
+          title: message_id
+        userId:
+          type:
+            - integer
+            - string
+          title: user_id
+          format: int64
+      title: GetMessageRequest
+      additionalProperties: false
+    tests.pathparams.message.v1.Message:
+      type: object
+      properties:
+        messageId:
+          type: string
+          title: message_id
+        userId:
+          type:
+            - integer
+            - string
+          title: user_id
+          format: int64
+        content:
+          type: string
+          title: content
+        maybe:
+          type: string
+          title: maybe
+          nullable: true
+      title: Message
+      additionalProperties: false
+    tests.pathparams.message.v1.Meta:
+      type: object
+      properties:
+        messageId:
+          type: string
+          title: message_id
+        userId:
+          type:
+            - integer
+            - string
+          title: user_id
+          format: int64
+        content:
+          type: string
+          title: content
+      title: Meta
+      additionalProperties: false
+    lava-protocol-version:
+      type: number
+      title: Lava-Protocol-Version
+      enum:
+        - 1
+      description: Define the version of the Lava protocol
+      const: 1
+    lava-timeout-header:
+      type: number
+      title: Lava-Timeout-Ms
+      description: Define the timeout, in ms
+    lava.error:
+      type: object
+      properties:
+        status_code:
+          type: string
+          examples:
+            - OK
+          title: status code
+          format: enum
+          enum:
+            - OK
+            - Canceled
+            - InvalidArgument
+            - DeadlineExceeded
+            - NotFound
+            - AlreadyExists
+            - PermissionDenied
+            - ResourceExhausted
+            - FailedPrecondition
+            - Aborted
+            - OutOfRange
+            - Unimplemented
+            - Internal
+            - Unavailable
+            - DataLoss
+            - Unauthenticated
+          description: GRPC code corresponding to HTTP status code, which can be converted to each other
+        name:
+          type: string
+          description: Error name, e.g. lava.auth.token_not_found.
+        message:
+          type: string
+          description: Error message, e.g. token not found
+        code:
+          type: number
+          description: Business Code, e.g. 200001
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/google.protobuf.Any'
+          title: details
+          description: Error detail include request or other user defined information
+      title: Lava Error
+      additionalProperties: true
+      description: 'Error type returned by lava: https://github.com/pubgo/funk/blob/master/proto/errorpb/errors.proto'
+    google.protobuf.Any:
+      type: object
+      properties:
+        type:
+          type: string
+        value:
+          type: string
+          format: binary
+        debug:
+          type: object
+          additionalProperties: true
+      additionalProperties: true
+      description: Contains an arbitrary serialized message along with a @type that describes the type of the serialized message.
+security:
+  - bearerAuth: []
+paths:
+  /v1/messages/{message_id}:
+    get:
+      tags:
+        - tests.pathparams.message.v1.Messaging
+      summary: GetMessage
+      operationId: tests.pathparams.message.v1.Messaging.GetMessage
+      parameters:
+        - name: message_id
+          in: path
+          required: true
+          schema:
+            type: string
+            title: message_id
+        - name: userId
+          in: query
+          schema:
+            type:
+              - integer
+              - string
+            title: user_id
+            format: int64
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tests.pathparams.message.v1.Message'
+    post:
+      tags:
+        - tests.pathparams.message.v1.Messaging
+      summary: CreateMessage
+      operationId: tests.pathparams.message.v1.Messaging.CreateMessage
+      parameters:
+        - name: message_id
+          in: path
+          required: true
+          schema:
+            type: string
+            title: message_id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type:
+                    - integer
+                    - string
+                  title: user_id
+                  format: int64
+                content:
+                  type: string
+                  title: content
+                maybe:
+                  type: string
+                  title: maybe
+                  nullable: true
+              title: Message
+              additionalProperties: false
+        required: true
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tests.pathparams.message.v1.Message'
+  /v1/users/{user_id}/messages/{message_id}:
+    get:
+      tags:
+        - tests.pathparams.message.v1.Messaging
+      summary: GetUserMessage
+      operationId: tests.pathparams.message.v1.Messaging.GetUserMessage
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type:
+              - integer
+              - string
+            title: user_id
+            format: int64
+        - name: message_id
+          in: path
+          required: true
+          schema:
+            type: string
+            title: message_id
+      responses:
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/connect.error'
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tests.pathparams.message.v1.Message'
+tags:
+  - name: tests.pathparams.message.v1.Messaging

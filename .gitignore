@@ -21,3 +21,16 @@ Package.resolved
 extensions/sample/generated
 /.proto
 /vendor
+/bin
+/proto-vendor
+
+# Go workspace file
+go.work
+
+redoc-static.html
+
+out
+dist
+
+coverage.out
+coverage.html

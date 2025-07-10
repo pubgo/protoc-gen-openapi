@@ -1,0 +1,24 @@
+checksum: 5db5260814d43a77f717e6308ba54d8f8c802bf1
+vendor: proto-vendor
+root:
+  - examples
+includes:
+  - proto
+deps:
+  - name: google
+    url: github.com/googleapis/googleapis
+    path: /google
+    version: v0.0.0-20220601021915-4e0282f92e4e
+  - name: google/protobuf
+    url: /usr/local/include/google/protobuf
+  - name: buf/validate
+    url: github.com/bufbuild/protovalidate
+    path: /proto/protovalidate/buf/validate
+    version: v0.11.0
+plugins:
+  - name: openapi
+    out: examples/gen
+    opt:
+      - base=auth-base.yaml
+      - content-types=json
+      - debug=true

@@ -1,14 +1,20 @@
 builds:
   - main: ./main.go
-    id: protoc-gen-openapi
     binary: protoc-gen-openapi
-    skip: false
     goos:
       - linux
       - darwin
       - windows
     goarch:
       - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=0
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    ldflags:
+      - "-X '{{ .ModulePath }}/version.version={{ .Version }}'"
+      - "-X '{{ .ModulePath }}/version.commit={{ .Commit }}'"
+      - "-X '{{ .ModulePath }}/version.date={{ .CommitTimestamp }}'"
 archives:
   - name_template: "{{ .Binary }}-{{ .Tag }}-{{ .Os }}-{{ .Arch }}"
     format: tar.gz

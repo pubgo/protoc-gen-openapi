@@ -1,0 +1,30 @@
+syntax = "proto3";
+package foo;
+option go_package = "foo/bar";
+
+import "google/api/annotations.proto";
+import "buf/validate/validate.proto";
+
+message A {
+
+  message B {
+    message C {
+      string name = 2  [(buf.validate.field).required = true];
+    }
+
+    // the learner whose scores are being reported
+    C c = 1  [(buf.validate.field).required = true];
+
+  }
+
+  B b = 1  [(buf.validate.field).required = true];
+}
+
+service KnowledgeAssessmentReports {
+  rpc Score(A) returns (A) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+    option (google.api.http) = {
+      get: "/a"
+    };
+  }
+}

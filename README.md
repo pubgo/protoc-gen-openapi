@@ -1,67 +1,31 @@
 # protoc-gen-openapi
 
-> This directory contains a protoc plugin that generates an
-OpenAPI description for a REST API that corresponds to a
-Protocol Buffer service.
+- 本项目一个 protobuf openapi 插件的实现
+- 本项目早期参考了[protoc-gen-openapi](https://github.com/google/gnostic/tree/master/cmd/protoc-gen-openapi), 由于 gnostic 长时间不更新，并发现了优秀的替代品[protoc-gen-connect-openapi](https://github.com/sudorandom/protoc-gen-connect-openapi),  现在基于[protoc-gen-connect-openapi](https://github.com/sudorandom/protoc-gen-connect-openapi) 做了部分修改
+- internal/converter 大部分都是来自于 protoc-gen-connect-openapi, copy.go 部分是自己的实现
 
-> This project is a simplification of the [google/gnostic](https://github.com/google/gnostic/tree/main/openapiv3) project, dedicated to providing a simple version of the protoc-gen-openapi
+## 为什么修改 protoc-gen-connect-openapi
+- protoc-gen-connect-openapi 刚好和本项目早期底层使用一致, 为本项目重构提供了很好的思路和想法
+- protoc-gen-connect-openapi 是为了 connect-go 生成 openapi 文档, 包含不少 connect 关键词
+- protoc-gen-connect-openapi 不支持 grpc service 级别的注解
+- protoc-gen-connect-openapi 针对企业内部业务级别的修改无法支持
 
-Installation:
+## 改动部分
+
+- 使用原生的 [google.golang.org/protobuf/compiler/protogen](https://pkg.go.dev/google.golang.org/protobuf/compiler/protogen)
+- 添加了 grpc service 级别的注解 [service.proto](./proto/openapiv3/service.proto), [example](./examples/tests/openapiv3annotations/message.proto)
+- 添加了 [lava](https://github.com/pubgo/lava) 相关的 header 信息
+- 添加了 Error Code 定义 [error.proto](https://github.com/pubgo/funk/blob/master/proto/errorpb/errors.proto)
+- 使用 [protobuild](https://github.com/pubgo/protobuild) 进行 protobuf 构建和管理
+
+ ## Installation:
 
     go install github.com/pubgo/protoc-gen-openapi@latest
 
-Usage:
+## 使用
 
-	protoc sample.proto -I=. --openapi_out=.
+参考 `make protobuf_test`
 
-This runs the plugin for a file named `sample.proto` which 
-refers to additional .proto files in the same directory as
-`sample.proto`. Output is written to the current directory.
+## 计划
 
-## options
-
-1. `version`: version number text, e.g. 1.2.3
-   - **default**: `0.0.1`
-2. `title`: name of the API
-   - **default**: empty string or service name if there is only one service
-3. `description`: description of the API
-   - **default**: empty string or service description if there is only one service
-4. `naming`: naming convention. Use "proto" for passing names directly from the proto files
-   - **default**: `json`
-   - `json`: will turn field `updated_at` to `updatedAt`
-   - `proto`: keep field `updated_at` as it is
-5. `fq_schema_naming`: schema naming convention. If "true", generates fully-qualified schema names by prefixing them with the proto message package name
-   - **default**: false
-   - `false`: keep message `Book` as it is
-   - `true`: turn message `Book` to `google.example.library.v1.Book`, it is useful when there are same named message in different package
-6. `enum_type`: type for enum serialization. Use "string" for string-based serialization
-   - **default**: `integer`
-   - `integer`: setting type to `integer`
-      ```yaml
-      schema:
-        type: integer
-        format: enum
-      ```
-   - `string`: setting type to `string`, and list available values in `enum`
-      ```yaml
-      schema:
-        enum:
-          - UNKNOWN_KIND
-          - KIND_1
-          - KIND_2
-        type: string
-        format: enum
-      ```
-7. `depth`: depth of recursion for circular messages
-   - **default**: 2, this depth only used in query parameters, usually 2 is enough
-8. `default_response`: add default response. If "true", automatically adds a default response to operations which use the google.rpc.Status message.
-   Useful if you use envoy or grpc-gateway to transcode as they use this type for their default error responses.
-   - **default**: true, this option will add this default response for each method as following:
-      ```yaml
-      default:
-        description: Default error response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/google.rpc.Status'
-      ```
+- 长期兼容 gnostic, 兼容 protoc-gen-connect-openapi, 后期会进行重构

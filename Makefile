@@ -1,23 +1,16 @@
-test:
-	# since some tests call separately-built binaries, clear the cache to ensure all get run
-	go clean -testcache
-	go test ./... -v
-
 vet:
 	go vet ./...
-
-pb:
-	protobuild vendor
-
-pb_test:
-	protobuild -c protobuf_test.yaml vendor
-	protobuild -c protobuf_test.yaml gen
-
-install_gnostic:
-	go install github.com/google/gnostic/cmd/protoc-gen-openapi@v0.7.0
 
 protobuf:
 	protobuild vendor
 	protobuild gen
-	mv github.com/pubgo/protoc-gen-openapi/generator/service.pb.go ./generator
+	rm -rf generator
+	mv github.com/pubgo/protoc-gen-openapi/generator generator
 	rm -rf github.com
+
+protobuf_test:
+	protobuild vendor -c protobuf_auth_base.yaml
+	protobuild gen -c protobuf_auth_base.yaml
+
+install:
+	go install .
