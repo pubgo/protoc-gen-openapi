@@ -76,9 +76,9 @@ func fileToComponents(opts options.Options, fd protoreflect.FileDescriptor) (*v3
 				utils.CreateStringNode("br"),
 			},
 		}))
-		components.Schemas.Set("connect", base.CreateSchemaProxy(&base.Schema{
-			Title:       "connect",
-			Description: "Define the version of the Connect protocol",
+		components.Schemas.Set("lava", base.CreateSchemaProxy(&base.Schema{
+			Title:       "lava",
+			Description: "Define the version of the Lava protocol",
 			Enum: []*yaml.Node{
 				utils.CreateStringNode("v1"),
 			},

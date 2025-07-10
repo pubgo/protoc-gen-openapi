@@ -264,7 +264,7 @@ func methodToOperaton(opts options.Options, method protoreflect.MethodDescriptor
 			Description: "Error",
 			Content: util.MakeMediaTypes(
 				opts,
-				base.CreateSchemaProxyRef("#/components/schemas/connect.error"),
+				base.CreateSchemaProxyRef("#/components/schemas/lava.error"),
 				false,
 				isStreaming,
 			),
@@ -273,15 +273,15 @@ func methodToOperaton(opts options.Options, method protoreflect.MethodDescriptor
 
 	op.Parameters = append(op.Parameters,
 		&v3.Parameter{
-			Name:     "Connect-Protocol-Version",
+			Name:     "Lava-Protocol-Version",
 			In:       "header",
 			Required: util.BoolPtr(true),
-			Schema:   base.CreateSchemaProxyRef("#/components/schemas/connect-protocol-version"),
+			Schema:   base.CreateSchemaProxyRef("#/components/schemas/lava-protocol-version"),
 		},
 		&v3.Parameter{
-			Name:   "Connect-Timeout-Ms",
+			Name:   "Lava-Timeout-Ms",
 			In:     "header",
-			Schema: base.CreateSchemaProxyRef("#/components/schemas/connect-timeout-header"),
+			Schema: base.CreateSchemaProxyRef("#/components/schemas/lava-timeout-header"),
 		},
 	)
 
@@ -316,9 +316,9 @@ func methodToOperaton(opts options.Options, method protoreflect.MethodDescriptor
 				Schema: base.CreateSchemaProxyRef("#/components/schemas/compression"),
 			},
 			&v3.Parameter{
-				Name:   "connect",
+				Name:   "lava",
 				In:     "query",
-				Schema: base.CreateSchemaProxyRef("#/components/schemas/connect"),
+				Schema: base.CreateSchemaProxyRef("#/components/schemas/lava"),
 			},
 		)
 	} else {
@@ -331,6 +331,11 @@ func methodToOperaton(opts options.Options, method protoreflect.MethodDescriptor
 			),
 			Required: util.BoolPtr(true),
 		}
+	}
+
+	setResponse(op.Responses.Default)
+	for pair := op.Responses.Codes.First(); pair != nil; pair = pair.Next() {
+		setResponse(pair.Value())
 	}
 
 	return op

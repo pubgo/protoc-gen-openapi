@@ -17,6 +17,7 @@ deps:
     version: v0.11.0
 plugins:
   - name: openapi
+    out: examples/gen
     opt:
       - base=auth-base.yaml
       - content-types=json

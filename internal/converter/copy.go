@@ -411,6 +411,10 @@ func setComponents(hasMethods bool, components *v3.Components) {
 			Description: "Business Code, e.g. 200001",
 			Type:        []string{"number"},
 		}))
+		connectErrorProps.Set("id", base.CreateSchemaProxy(&base.Schema{
+			Description: "Error id, e.g. d1nqvseo94bs73f3c76g",
+			Type:        []string{"string"},
+		}))
 		connectErrorProps.Set("details", base.CreateSchemaProxy(&base.Schema{
 			Title:       "details",
 			Description: "Error detail include request or other user defined information",
@@ -463,4 +467,41 @@ func enumToSchemaV1(state *State, tt protoreflect.EnumDescriptor) (string, *base
 		Default:     children[0],
 	}
 	return string(tt.FullName()), s
+}
+
+func setResponse(rsp *v3.Response) {
+	if rsp == nil {
+		return
+	}
+
+	if rsp.Headers == nil {
+		rsp.Headers = orderedmap.New[string, *v3.Header]()
+	}
+
+	rsp.Headers.Set("x-request-id", &v3.Header{
+		Description: "request id",
+		Required:    true,
+		Deprecated:  false,
+		Example:     utils.CreateStringNode("d1nqvseo94bs73f3c76g"),
+	})
+
+	rsp.Headers.Set("x-request-latency", &v3.Header{
+		Description: "request latency ms",
+		Required:    true,
+		Deprecated:  false,
+		Example:     utils.CreateStringNode("3217"),
+	})
+	rsp.Headers.Set("x-request-operation", &v3.Header{
+		Description: "request operation name",
+		Required:    true,
+		Deprecated:  false,
+		Example:     utils.CreateStringNode("/lava.v1.Org/GetOrg"),
+	})
+
+	rsp.Headers.Set("x-request-version", &v3.Header{
+		Description: "request service version",
+		Required:    true,
+		Deprecated:  false,
+		Example:     utils.CreateStringNode("v0.0.1-alpha.1"),
+	})
 }
