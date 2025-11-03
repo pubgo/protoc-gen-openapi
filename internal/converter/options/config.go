@@ -6,8 +6,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/pubgo/funk"
-	"github.com/pubgo/funk/assert"
+	"github.com/pubgo/funk/v2"
 	"github.com/samber/lo"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -70,10 +69,10 @@ func (c Config) ToOptions() (Options, error) {
 
 		ext := strings.TrimSpace(path.Ext(basePath))
 		if lo.Contains([]string{".yaml", ".yml", ".json"}, ext) {
-			return assert.Must1(os.ReadFile(basePath))
+			return lo.Must1(os.ReadFile(basePath))
 		}
 
-		assert.Must(fmt.Errorf("the file extension for 'base' should end with yaml or json, not '%s'", ext))
+		lo.Must0(fmt.Errorf("the file extension for 'base' should end with yaml or json, not '%s'", ext))
 		return nil
 	})
 

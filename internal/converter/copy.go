@@ -15,9 +15,9 @@ import (
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 	"github.com/pb33f/libopenapi/orderedmap"
 	"github.com/pb33f/libopenapi/utils"
-	"github.com/pubgo/funk/assert"
-	"github.com/pubgo/funk/errors"
-	"github.com/pubgo/funk/recovery"
+	"github.com/pubgo/funk/v2/assert"
+	"github.com/pubgo/funk/v2/errors"
+	"github.com/pubgo/funk/v2/recovery"
 	"github.com/pubgo/protoc-gen-openapi/generator"
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/gnostic"
 	"github.com/pubgo/protoc-gen-openapi/internal/converter/googleapi"
@@ -425,7 +425,7 @@ func setComponents(hasMethods bool, components *v3.Components) {
 	}
 	components.Schemas.Set("lava.error", base.CreateSchemaProxy(&base.Schema{
 		Title:                "Lava Error",
-		Description:          `Error type returned by lava: https://github.com/pubgo/funk/blob/master/proto/errorpb/errors.proto`,
+		Description:          `Error type returned by lava: https://github.com/pubgo/funk/v2/blob/master/proto/errorpb/errors.proto`,
 		Properties:           getErrorProps(),
 		Type:                 []string{"object"},
 		AdditionalProperties: &base.DynamicValue[*base.SchemaProxy, bool]{N: 1, B: true},
